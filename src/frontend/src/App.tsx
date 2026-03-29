@@ -174,6 +174,8 @@ const GAME_MODES = [
     emoji: "🎯",
     entryFee: 20,
     prizePool: 35,
+    perKill: 3,
+    winnerBonus: 20,
     desc: "Battle Royale Solo",
   },
   {
@@ -183,6 +185,8 @@ const GAME_MODES = [
     emoji: "🎮",
     entryFee: 40,
     prizePool: 70,
+    perKill: 5,
+    winnerBonus: 30,
     desc: "Battle Royale Duo",
   },
   {
@@ -192,6 +196,8 @@ const GAME_MODES = [
     emoji: "🏆",
     entryFee: 80,
     prizePool: 300,
+    perKill: 6,
+    winnerBonus: 80,
     desc: "Battle Royale Squad",
   },
   {
@@ -620,6 +626,7 @@ export default function App() {
           <MatchHistoryView
             key="matches"
             currentUser={currentUser}
+            coins={coins}
             setView={setView}
             setIsLoading={setIsLoading}
             showToast={showToast}
@@ -1575,6 +1582,22 @@ function DashboardView({
                   ₹{mode.prizePool}
                 </span>
               </div>
+              {(mode as any).perKill && (
+                <div className="mode-stat" style={{ fontSize: "0.6rem" }}>
+                  Kill{" "}
+                  <span style={{ color: "#fbbf24" }}>
+                    ₹{(mode as any).perKill}
+                  </span>
+                </div>
+              )}
+              {(mode as any).winnerBonus && (
+                <div className="mode-stat" style={{ fontSize: "0.6rem" }}>
+                  Win{" "}
+                  <span style={{ color: "#34d399" }}>
+                    +₹{(mode as any).winnerBonus}
+                  </span>
+                </div>
+              )}
             </div>
           </button>
         ))}
@@ -1583,6 +1606,174 @@ function DashboardView({
       {/* Payment */}
       <div className="card" style={{ marginBottom: 12 }}>
         <div className="section-label">💸 Deposit Payment</div>
+
+        {/* UPI & WhatsApp Payment Info Box */}
+        <div
+          style={{
+            background:
+              "linear-gradient(135deg, #1a0533 0%, #2d0a4e 40%, #0d1a3a 100%)",
+            border: "2px solid #ff6b00",
+            borderRadius: 16,
+            padding: "18px 16px",
+            marginBottom: 14,
+            boxShadow:
+              "0 0 24px rgba(255,107,0,0.35), 0 0 8px rgba(255,107,0,0.2)",
+            position: "relative" as const,
+            overflow: "hidden",
+          }}
+        >
+          {/* Glow top accent */}
+          <div
+            style={{
+              position: "absolute" as const,
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              background: "linear-gradient(90deg, #ff6b00, #ffe066, #ff6b00)",
+              borderRadius: "16px 16px 0 0",
+            }}
+          />
+
+          <div style={{ textAlign: "center" as const, marginBottom: 12 }}>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                fontFamily: "Orbitron, sans-serif",
+                letterSpacing: 2,
+                color: "#ffe066",
+                textTransform: "uppercase" as const,
+                opacity: 0.9,
+              }}
+            >
+              💳 Payment Details
+            </span>
+          </div>
+
+          {/* UPI Box */}
+          <div
+            style={{
+              background: "rgba(255,107,0,0.12)",
+              border: "1.5px solid rgba(255,107,0,0.6)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: "1.4rem" }}>📲</span>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  color: "#ffb347",
+                  fontFamily: "Rajdhani, sans-serif",
+                  letterSpacing: 1,
+                  marginBottom: 2,
+                }}
+              >
+                UPI ID
+              </div>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  fontFamily: "Orbitron, sans-serif",
+                  color: "#fff",
+                  letterSpacing: 1,
+                  textShadow: "0 0 10px rgba(255,107,0,0.8)",
+                }}
+              >
+                8247835354@ibl
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText("8247835354@ibl");
+                showToast("UPI ID copied! 📋", "success");
+              }}
+              style={{
+                background: "rgba(255,107,0,0.2)",
+                border: "1px solid rgba(255,107,0,0.6)",
+                borderRadius: 6,
+                padding: "6px 10px",
+                cursor: "pointer",
+                color: "#ffb347",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                letterSpacing: 0.5,
+              }}
+            >
+              📋 COPY
+            </button>
+          </div>
+
+          {/* WhatsApp Box */}
+          <a
+            href="https://wa.me/917013256124"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "rgba(37,211,102,0.12)",
+              border: "1.5px solid rgba(37,211,102,0.5)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ fontSize: "1.4rem" }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  color: "#25d366",
+                  fontFamily: "Rajdhani, sans-serif",
+                  letterSpacing: 1,
+                  marginBottom: 2,
+                }}
+              >
+                WhatsApp Support
+              </div>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  fontFamily: "Orbitron, sans-serif",
+                  color: "#fff",
+                  letterSpacing: 1,
+                  textShadow: "0 0 10px rgba(37,211,102,0.7)",
+                }}
+              >
+                7013256124
+              </div>
+            </div>
+            <span
+              style={{ fontSize: "0.75rem", color: "#25d366", fontWeight: 700 }}
+            >
+              TAP →
+            </span>
+          </a>
+
+          <div
+            style={{
+              textAlign: "center" as const,
+              marginTop: 10,
+              fontSize: "0.7rem",
+              color: "rgba(255,255,255,0.5)",
+              fontFamily: "Rajdhani, sans-serif",
+            }}
+          >
+            Pay via UPI → Submit UTR below
+          </div>
+        </div>
+
         <div className="field-group">
           <input
             className="fire-input"
@@ -1948,7 +2139,7 @@ function MatchJoinModal({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: (mode as any).perKill ? "1fr 1fr" : "1fr 1fr",
             gap: 12,
             marginBottom: 20,
           }}
@@ -1963,6 +2154,22 @@ function MatchJoinModal({
             </div>
             <div className="stat-label">Prize Pool</div>
           </div>
+          {(mode as any).perKill && (
+            <div className="stat-box">
+              <div className="stat-value" style={{ color: "#fbbf24" }}>
+                ₹{(mode as any).perKill}
+              </div>
+              <div className="stat-label">Per Kill</div>
+            </div>
+          )}
+          {(mode as any).winnerBonus && (
+            <div className="stat-box">
+              <div className="stat-value" style={{ color: "#34d399" }}>
+                ₹{(mode as any).winnerBonus}
+              </div>
+              <div className="stat-label">Winner Bonus</div>
+            </div>
+          )}
         </div>
         <div
           style={{
@@ -2004,11 +2211,13 @@ function MatchJoinModal({
 // ─── Match History ────────────────────────────────────────────────────────────
 function MatchHistoryView({
   currentUser,
+  coins: _coins,
   setView,
   setIsLoading,
   showToast,
 }: {
   currentUser: string;
+  coins?: number;
   setView: (v: View) => void;
   setIsLoading: (v: boolean) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
@@ -2042,8 +2251,24 @@ function MatchHistoryView({
   const cancelMatch = async (id: string) => {
     setIsLoading(true);
     try {
-      await deleteDoc(doc(db, "matches", id));
-      showToast("Match cancelled");
+      const matchSnap = await getDoc(doc(db, "matches", id));
+      const matchData = matchSnap.exists() ? matchSnap.data() : null;
+      const refundAmount = matchData?.entryFee ?? 0;
+      const walletSnap = await getDoc(doc(db, "wallet", currentUser));
+      const currentCoins = walletSnap.exists()
+        ? (walletSnap.data().coins ?? 0)
+        : 0;
+      await Promise.all([
+        deleteDoc(doc(db, "matches", id)),
+        ...(refundAmount > 0
+          ? [
+              setDoc(doc(db, "wallet", currentUser), {
+                coins: currentCoins + refundAmount,
+              }),
+            ]
+          : []),
+      ]);
+      showToast(`Match cancelled. ₹${refundAmount} refunded to wallet! 💰`);
       load();
     } catch (_) {
       showToast("Error cancelling", "error");
@@ -3769,6 +3994,9 @@ function AdminMatchesView({
     Record<string, { roomId: string; roomPass: string }>
   >({});
   const [winnerInput, setWinnerInput] = useState<Record<string, string>>({});
+  const [killInputs, setKillInputs] = useState<
+    Record<string, Record<string, string>>
+  >({}); // matchId -> {uid: killCount}
   const [creating, setCreating] = useState(false);
   const [newMode, setNewMode] = useState(GAME_MODES[0].id);
 
@@ -3877,14 +4105,51 @@ function AdminMatchesView({
     }
     setIsLoading(true);
     try {
+      const modeData = GAME_MODES.find((gm) => gm.id === m.mode);
+      const perKill = (modeData as any)?.perKill || 0;
+      const winnerBonus = (modeData as any)?.winnerBonus || 0;
+      const matchKills = killInputs[m.id] || {};
+
+      // Award kill coins to all players who have kills entered
+      const killOps: Promise<unknown>[] = [];
+      for (const [uid, killStr] of Object.entries(matchKills)) {
+        const kills = Number.parseInt(killStr as string) || 0;
+        if (kills > 0 && perKill > 0) {
+          const wSnap = await getDoc(doc(db, "wallet", uid));
+          const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
+          const earned = kills * perKill;
+          killOps.push(setDoc(doc(db, "wallet", uid), { coins: cur + earned }));
+          // Update user stats
+          const uSnap = await getDoc(doc(db, "users", uid));
+          if (uSnap.exists()) {
+            killOps.push(
+              updateDoc(doc(db, "users", uid), {
+                kills: (uSnap.data().kills || 0) + kills,
+              }),
+            );
+          }
+        }
+      }
+      await Promise.all(killOps);
+
+      // Award winner bonus + prizePool to winner
+      const winnerPrize = winnerBonus > 0 ? winnerBonus : m.prizePool;
       const snap = await getDoc(doc(db, "wallet", winner));
       const cur = snap.exists() ? snap.data().coins || 0 : 0;
+      const winnerSnap = await getDoc(doc(db, "users", winner));
       await Promise.all([
-        setDoc(doc(db, "wallet", winner), { coins: cur + m.prizePool }),
+        setDoc(doc(db, "wallet", winner), { coins: cur + winnerPrize }),
         updateDoc(doc(db, "matches", m.id), { winner, status: "completed" }),
+        ...(winnerSnap.exists()
+          ? [
+              updateDoc(doc(db, "users", winner), {
+                wins: (winnerSnap.data().wins || 0) + 1,
+              }),
+            ]
+          : []),
       ]);
-      await logAdminAction(`Awarded prize ₹${m.prizePool}`, winner);
-      showToast(`Prize ₹${m.prizePool} awarded to ${winner}!`);
+      await logAdminAction(`Awarded prize ₹${winnerPrize}`, winner);
+      showToast(`🏆 Prize ₹${winnerPrize} awarded to ${winner}!`);
       load();
     } catch (_) {
       showToast("Error", "error");
@@ -3894,12 +4159,33 @@ function AdminMatchesView({
   };
 
   const cancelMatch = async (id: string) => {
-    if (!window.confirm("Cancel this match?")) return;
+    if (
+      !window.confirm(
+        "Cancel this match? Entry fee will be refunded to player.",
+      )
+    )
+      return;
     setIsLoading(true);
     try {
-      await deleteDoc(doc(db, "matches", id));
-      await logAdminAction("Cancelled match", id);
-      showToast("Match cancelled");
+      const matchSnap = await getDoc(doc(db, "matches", id));
+      const matchData = matchSnap.exists() ? matchSnap.data() : null;
+      const player = matchData?.player;
+      const refundAmount = matchData?.entryFee ?? 0;
+      const ops: Promise<unknown>[] = [
+        deleteDoc(doc(db, "matches", id)),
+        logAdminAction(`Cancelled match (refunded ₹${refundAmount})`, id),
+      ];
+      if (player && refundAmount > 0) {
+        const wSnap = await getDoc(doc(db, "wallet", player));
+        const cur = wSnap.exists() ? (wSnap.data().coins ?? 0) : 0;
+        ops.push(
+          setDoc(doc(db, "wallet", player), { coins: cur + refundAmount }),
+        );
+      }
+      await Promise.all(ops);
+      showToast(
+        `Match cancelled. ₹${refundAmount} refunded to ${player ?? "player"}.`,
+      );
       load();
     } catch (_) {
       showToast("Error", "error");
@@ -4180,6 +4466,93 @@ function AdminMatchesView({
                   ✕ Cancel
                 </button>
               </div>
+              {/* Per-kill tracking for BR modes */}
+              {GAME_MODES.find((gm) => gm.id === m.mode) &&
+                (GAME_MODES.find((gm) => gm.id === m.mode) as any).perKill >
+                  0 &&
+                m.players &&
+                m.players.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: "10px",
+                      background: "rgba(255,107,0,0.08)",
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,107,0,0.3)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        color: "#ffb347",
+                        marginBottom: 6,
+                        fontWeight: 700,
+                      }}
+                    >
+                      🎯 Kill Tracker — ₹
+                      {
+                        (GAME_MODES.find((gm) => gm.id === m.mode) as any)
+                          .perKill
+                      }
+                      /kill
+                    </div>
+                    {m.players.map((uid: string) => (
+                      <div
+                        key={uid}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--muted)",
+                            minWidth: 70,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {uid}
+                        </span>
+                        <input
+                          className="fire-input"
+                          type="number"
+                          min="0"
+                          placeholder="Kills"
+                          value={killInputs[m.id]?.[uid] || ""}
+                          onChange={(e) =>
+                            setKillInputs((prev) => ({
+                              ...prev,
+                              [m.id]: { ...prev[m.id], [uid]: e.target.value },
+                            }))
+                          }
+                          style={{
+                            width: 70,
+                            padding: "4px 8px",
+                            fontSize: "0.8rem",
+                          }}
+                        />
+                        {killInputs[m.id]?.[uid] &&
+                          Number.parseInt(killInputs[m.id][uid]) > 0 && (
+                            <span
+                              style={{ fontSize: "0.75rem", color: "#22c55e" }}
+                            >
+                              +₹
+                              {Number.parseInt(killInputs[m.id][uid]) *
+                                (
+                                  GAME_MODES.find(
+                                    (gm) => gm.id === m.mode,
+                                  ) as any
+                                ).perKill}
+                            </span>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               {/* Select Winner */}
               <div style={{ marginTop: 8 }}>
                 <div
@@ -4189,7 +4562,11 @@ function AdminMatchesView({
                     marginBottom: 4,
                   }}
                 >
-                  Award Prize
+                  {GAME_MODES.find((gm) => gm.id === m.mode) &&
+                  (GAME_MODES.find((gm) => gm.id === m.mode) as any)
+                    .winnerBonus > 0
+                    ? `Award Winner Bonus (₹${(GAME_MODES.find((gm) => gm.id === m.mode) as any).winnerBonus}) + Kill Coins`
+                    : "Award Prize"}
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <input

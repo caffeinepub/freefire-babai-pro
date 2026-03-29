@@ -128,18 +128,20 @@
 
   .fire-btn {
     width: 100%;
-    padding: 12px;
+    padding: 15px;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     background: linear-gradient(135deg, #e65c00, #fb8c00);
     color: white;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.05rem;
+    font-weight: 800;
     font-family: "Rajdhani", sans-serif;
     cursor: pointer;
     transition: all 0.2s ease;
-    letter-spacing: 0.05em;
-    box-shadow: 0 2px 12px rgba(251, 140, 0, 0.3);
+    letter-spacing: 0.07em;
+    box-shadow: 0 4px 18px rgba(251, 140, 0, 0.45), 0 0 0 1.5px
+      rgba(251, 140, 0, 0.15);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   }
 
   .fire-btn:hover {
@@ -159,8 +161,8 @@
   }
 
   .fire-btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid var(--border-color);
     color: var(--text);
     box-shadow: none;
   }
@@ -611,9 +613,9 @@
 
   .quick-btn {
     background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    padding: 18px 14px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -622,8 +624,8 @@
     gap: 6px;
     color: var(--text);
     font-family: "Rajdhani", sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
   }
 
   .quick-btn:hover {
@@ -899,19 +901,20 @@
 
   /* Back btn */
   .back-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid var(--border-color);
+    border-radius: 9px;
+    color: var(--text);
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-family: "Rajdhani", sans-serif;
-    font-weight: 600;
-    padding: 8px 0;
-    transition: color 0.2s;
-    letter-spacing: 0.03em;
+    font-weight: 700;
+    padding: 8px 14px;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
   }
 
   .back-btn:hover {
@@ -1185,17 +1188,18 @@
   }
 
   .action-btn {
-    padding: 5px 10px;
-    border-radius: 7px;
-    border: 1px solid var(--border-color);
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 2px solid var(--border-color);
     background: transparent;
     color: var(--text);
     font-family: "Rajdhani", sans-serif;
-    font-size: 0.78rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 800;
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
+    letter-spacing: 0.04em;
   }
 
   .action-btn:hover {
