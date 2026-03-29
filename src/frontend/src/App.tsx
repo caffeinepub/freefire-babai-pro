@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -92,6 +93,7 @@ interface MatchData {
   roomPass: string;
   timestamp: unknown;
   startedAt?: number;
+  scheduledTime?: number;
   players?: string[];
   maxPlayers?: number;
 }
@@ -199,24 +201,6 @@ const GAME_MODES = [
     perKill: 6,
     winnerBonus: 80,
     desc: "Battle Royale Squad",
-  },
-  {
-    id: "sniper",
-    maxPlayers: 2,
-    label: "Sniper Match",
-    emoji: "🔭",
-    entryFee: 25,
-    prizePool: 45,
-    desc: "Sniper Duel",
-  },
-  {
-    id: "fun",
-    maxPlayers: 10,
-    label: "Fun Match",
-    emoji: "🎉",
-    entryFee: 10,
-    prizePool: 15,
-    desc: "Custom Room Fun",
   },
   {
     id: "highstakes",
@@ -1246,11 +1230,58 @@ function DashboardView({
   loadWallet: (uid: string) => void;
 }) {
   const [utr, setUtr] = useState("");
+  const [depositAmt, setDepositAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
   const [pendingPayments, setPendingPayments] = useState<PaymentData[]>([]);
   const [pendingWithdraws, setPendingWithdraws] = useState<WithdrawData[]>([]);
   const isAdmin = currentUser === "admin";
+  const [activeMatches, setActiveMatches] = useState<MatchData[]>([]);
+  const [showRoomMap, setShowRoomMap] = useState<Record<string, boolean>>({});
+  const copyText = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => showToast("Copied! ✅"));
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    // Query player's own match docs (player == currentUser)
+    const q = query(
+      collection(db, "matches"),
+      where("player", "==", currentUser),
+      where("status", "in", ["waiting", "live", "full"]),
+    );
+    const unsub = onSnapshot(q, async (snap) => {
+      const matches = snap.docs.map(
+        (d) => ({ id: d.id, ...d.data() }) as MatchData,
+      );
+      // For matches with a roomRef, merge roomId/roomPass from the admin room doc
+      const enriched = await Promise.all(
+        matches.map(async (m) => {
+          if ((m as any).roomRef && !m.roomId) {
+            try {
+              const refSnap = await getDoc(
+                doc(db, "matches", (m as any).roomRef),
+              );
+              if (refSnap.exists()) {
+                const refData = refSnap.data();
+                return {
+                  ...m,
+                  roomId: refData.roomId || "",
+                  roomPass: refData.roomPass || "",
+                  scheduledTime: refData.scheduledTime || m.scheduledTime,
+                };
+              }
+            } catch (_) {
+              /* ignore */
+            }
+          }
+          return m;
+        }),
+      );
+      setActiveMatches(enriched);
+    });
+    return () => unsub();
+  }, [currentUser]);
 
   const loadAdmin = useCallback(async () => {
     const [pSnap, wSnap] = await Promise.all([
@@ -1274,6 +1305,11 @@ function DashboardView({
   }, [isAdmin, adminOpen, loadAdmin]);
 
   const submitUTR = async () => {
+    const dAmt = Number(depositAmt);
+    if (!dAmt || dAmt < 30) {
+      showToast("Minimum deposit amount is ₹30", "error");
+      return;
+    }
     if (!utr.trim()) {
       showToast("Enter UTR number", "error");
       return;
@@ -1283,11 +1319,12 @@ function DashboardView({
       await addDoc(collection(db, "payments"), {
         user: currentUser,
         utr: utr.trim(),
-        amount: 25,
+        amount: dAmt,
         status: "Pending",
       });
       showToast("Payment submitted!");
       setUtr("");
+      setDepositAmt("");
     } catch (_) {
       showToast("Submission failed", "error");
     } finally {
@@ -1503,6 +1540,224 @@ function DashboardView({
           </button>
         ))}
       </div>
+
+      {/* Active Matches on Dashboard */}
+      {activeMatches.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div className="section-label">🎮 Your Active Matches</div>
+          {activeMatches.map((m) => (
+            <div key={m.id} className="list-item" style={{ marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                    fontSize: "0.88rem",
+                  }}
+                >
+                  {m.mode?.toUpperCase()}
+                </span>
+                <span
+                  className={`badge ${m.status === "live" ? "badge-success" : "badge-warning"}`}
+                >
+                  {m.status}
+                </span>
+              </div>
+              {m.status === "live" && <LiveTimer startedAt={m.startedAt} />}
+              {m.status === "waiting" && m.scheduledTime && (
+                <ScheduleCountdown scheduledTime={m.scheduledTime} />
+              )}
+
+              {/* ── Room ID & Password Button ── */}
+              {m.roomId || m.roomPass ? (
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowRoomMap((prev) => ({
+                        ...prev,
+                        [m.id]: !prev[m.id],
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      background: "linear-gradient(135deg, #ff6b00, #ff9a00)",
+                      border: "2px solid #ffb347",
+                      borderRadius: 10,
+                      color: "#fff",
+                      fontFamily: "Orbitron, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "0.8rem",
+                      letterSpacing: "0.06em",
+                      cursor: "pointer",
+                      boxShadow:
+                        "0 0 16px rgba(255,107,0,0.6), 0 0 6px rgba(255,107,0,0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                    }}
+                    data-ocid="dashboard.primary_button"
+                  >
+                    🔑{" "}
+                    {showRoomMap[m.id]
+                      ? "HIDE ROOM INFO"
+                      : "VIEW ROOM ID & PASSWORD"}
+                  </button>
+
+                  {showRoomMap[m.id] && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        background: "linear-gradient(135deg, #1a0533, #0d1a3a)",
+                        border: "2px solid rgba(255,107,0,0.6)",
+                        borderRadius: 12,
+                        padding: "14px 12px",
+                        boxShadow: "0 0 18px rgba(255,107,0,0.3)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: "rgba(255,107,0,0.1)",
+                            border: "1.5px solid rgba(255,107,0,0.5)",
+                            borderRadius: 8,
+                            padding: "10px 10px 8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.6rem",
+                              color: "#ff9a00",
+                              fontFamily: "Orbitron, sans-serif",
+                              letterSpacing: 1,
+                              marginBottom: 4,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Room ID
+                          </div>
+                          <div
+                            style={{
+                              fontWeight: 800,
+                              fontSize: "1rem",
+                              color: "#fff",
+                              letterSpacing: "0.08em",
+                              marginBottom: 6,
+                            }}
+                          >
+                            {m.roomId || "—"}
+                          </div>
+                          {m.roomId && (
+                            <button
+                              type="button"
+                              onClick={() => copyText(m.roomId)}
+                              style={{
+                                background: "var(--accent)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 5,
+                                padding: "4px 10px",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              📋 COPY
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            background: "rgba(255,107,0,0.1)",
+                            border: "1.5px solid rgba(255,107,0,0.5)",
+                            borderRadius: 8,
+                            padding: "10px 10px 8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "0.6rem",
+                              color: "#ff9a00",
+                              fontFamily: "Orbitron, sans-serif",
+                              letterSpacing: 1,
+                              marginBottom: 4,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Password
+                          </div>
+                          <div
+                            style={{
+                              fontWeight: 800,
+                              fontSize: "1rem",
+                              color: "#fff",
+                              letterSpacing: "0.08em",
+                              marginBottom: 6,
+                            }}
+                          >
+                            {m.roomPass || "—"}
+                          </div>
+                          {m.roomPass && (
+                            <button
+                              type="button"
+                              onClick={() => copyText(m.roomPass)}
+                              style={{
+                                background: "var(--accent)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: 5,
+                                padding: "4px 10px",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              📋 COPY
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--muted)",
+                    marginTop: 8,
+                    padding: "8px 10px",
+                    background: "rgba(255,255,255,0.04)",
+                    borderRadius: 8,
+                    border: "1px dashed rgba(255,255,255,0.15)",
+                    textAlign: "center",
+                  }}
+                >
+                  ⏳ Waiting for admin to assign Room ID & Password...
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Game modes */}
       <div className="section-label">Game Modes</div>
@@ -1774,6 +2029,40 @@ function DashboardView({
           </div>
         </div>
 
+        <div className="field-group">
+          <div
+            style={{
+              marginBottom: 6,
+              fontSize: "0.78rem",
+              color: "#ff9500",
+              fontFamily: "Rajdhani, sans-serif",
+              fontWeight: 700,
+              letterSpacing: 0.5,
+            }}
+          >
+            💡 Minimum deposit amount:{" "}
+            <span
+              style={{
+                color: "#fff",
+                background: "rgba(255,149,0,0.18)",
+                borderRadius: 4,
+                padding: "1px 7px",
+                border: "1px solid #ff9500",
+              }}
+            >
+              ₹30
+            </span>
+          </div>
+          <input
+            className="fire-input"
+            type="number"
+            min={30}
+            placeholder="Enter Amount (Min ₹30)"
+            value={depositAmt}
+            onChange={(e) => setDepositAmt(e.target.value)}
+            data-ocid="deposit.amount_input"
+          />
+        </div>
         <div className="field-group">
           <input
             className="fire-input"
@@ -2096,6 +2385,18 @@ function MatchJoinModal({
           }),
         ]);
       }
+      // Save join notification
+      try {
+        await addDoc(collection(db, "notifications"), {
+          uid: currentUser,
+          title: "✅ Match Joined!",
+          message: `You joined ${mode.label}. Entry fee ₹${mode.entryFee} deducted. Waiting for Room ID & Password.`,
+          read: false,
+          timestamp: new Date(),
+        });
+      } catch (_) {
+        /* ignore notification error */
+      }
       onJoined();
     } catch (_) {
       showToast("Failed to join match", "error");
@@ -2339,63 +2640,68 @@ function MatchHistoryView({
                 ₹{m.entryFee} / 🏆₹{m.prizePool}
               </div>
             </div>
-            {m.status === "live" && (
+            {(m.status === "live" || m.status === "waiting") && (
               <div style={{ marginBottom: 8 }}>
-                <LiveTimer startedAt={m.startedAt} />
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 8,
-                    marginBottom: 8,
-                    marginTop: 8,
-                  }}
-                >
-                  <div className="room-info-box">
-                    <div className="room-info-label">Room ID</div>
-                    <div className="room-info-value">
-                      {m.roomId || "Pending"}
+                {m.status === "live" && <LiveTimer startedAt={m.startedAt} />}
+                {m.status === "waiting" && m.scheduledTime && (
+                  <ScheduleCountdown scheduledTime={m.scheduledTime} />
+                )}
+                {
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 8,
+                      marginBottom: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <div className="room-info-box">
+                      <div className="room-info-label">Room ID</div>
+                      <div className="room-info-value">
+                        {m.roomId || "Pending"}
+                      </div>
+                      {m.roomId && (
+                        <button
+                          type="button"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--muted)",
+                            marginTop: 4,
+                          }}
+                          onClick={() => copyText(m.roomId)}
+                          data-ocid="matches.secondary_button"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      )}
                     </div>
-                    {m.roomId && (
-                      <button
-                        type="button"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--muted)",
-                          marginTop: 4,
-                        }}
-                        onClick={() => copyText(m.roomId)}
-                        data-ocid="matches.secondary_button"
-                      >
-                        <Copy size={12} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="room-info-box">
-                    <div className="room-info-label">Password</div>
-                    <div className="room-info-value">
-                      {m.roomPass || "Pending"}
+                    <div className="room-info-box">
+                      <div className="room-info-label">Password</div>
+                      <div className="room-info-value">
+                        {m.roomPass || "Pending"}
+                      </div>
+                      {m.roomPass && (
+                        <button
+                          type="button"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--muted)",
+                            marginTop: 4,
+                          }}
+                          onClick={() => copyText(m.roomPass)}
+                          data-ocid="matches.secondary_button"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      )}
                     </div>
-                    {m.roomPass && (
-                      <button
-                        type="button"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--muted)",
-                          marginTop: 4,
-                        }}
-                        onClick={() => copyText(m.roomPass)}
-                        data-ocid="matches.secondary_button"
-                      >
-                        <Copy size={12} />
-                      </button>
-                    )}
                   </div>
-                </div>
+                }
               </div>
             )}
             {m.status === "waiting" && (
@@ -3337,6 +3643,59 @@ function LiveTimer({ startedAt }: { startedAt?: number }) {
   );
 }
 
+function ScheduleCountdown({ scheduledTime }: { scheduledTime?: number }) {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    if (!scheduledTime) return;
+    const update = () =>
+      setRemaining(
+        Math.max(0, Math.floor((scheduledTime - Date.now()) / 1000)),
+      );
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [scheduledTime]);
+
+  if (!scheduledTime) return null;
+
+  if (remaining <= 0) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: "0.82rem",
+          color: "#f59e0b",
+          fontWeight: 700,
+        }}
+      >
+        ⏰ Room starting soon...
+      </div>
+    );
+  }
+
+  const h = Math.floor(remaining / 3600);
+  const m = Math.floor((remaining % 3600) / 60);
+  const s = remaining % 60;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: "0.82rem",
+        color: "#f59e0b",
+        fontWeight: 700,
+      }}
+    >
+      ⏰ Starts in: {h > 0 ? `${h}h ` : ""}
+      {m}m {s}s
+    </div>
+  );
+}
+
 // ─── Admin Types ──────────────────────────────────────────────────────────────
 type AdminView =
   | "admin-dashboard"
@@ -3993,11 +4352,14 @@ function AdminMatchesView({
   const [roomInputs, setRoomInputs] = useState<
     Record<string, { roomId: string; roomPass: string }>
   >({});
+  const [scheduleInputs, setScheduleInputs] = useState<Record<string, string>>(
+    {},
+  );
   const [winnerInput, setWinnerInput] = useState<Record<string, string>>({});
   const [killInputs, setKillInputs] = useState<
     Record<string, Record<string, string>>
   >({}); // matchId -> {uid: killCount}
-  const [creating, setCreating] = useState(false);
+  const [_creating, setCreating] = useState(false);
   const [newMode, setNewMode] = useState(GAME_MODES[0].id);
 
   const load = useCallback(async () => {
@@ -4058,6 +4420,30 @@ function AdminMatchesView({
       });
       await logAdminAction("Assigned room", id);
       showToast("Room assigned!");
+      load();
+    } catch (_) {
+      showToast("Error", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setSchedule = async (id: string) => {
+    const timeStr = scheduleInputs[id];
+    if (!timeStr) {
+      showToast("Enter a valid date/time", "error");
+      return;
+    }
+    const ts = new Date(timeStr).getTime();
+    if (Number.isNaN(ts)) {
+      showToast("Invalid date/time", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updateDoc(doc(db, "matches", id), { scheduledTime: ts });
+      await logAdminAction("Set schedule", id);
+      showToast("Schedule set!");
       load();
     } catch (_) {
       showToast("Error", "error");
@@ -4205,68 +4591,152 @@ function AdminMatchesView({
 
   return (
     <div data-ocid="admin.matches.section">
+      {/* ─── CREATE ROOM BOX ──────────────────────────────────────────── */}
       <div
+        data-ocid="admin.matches.create_room_box"
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 12,
+          background:
+            "linear-gradient(135deg, rgba(255,100,0,0.12) 0%, rgba(255,60,0,0.06) 100%)",
+          border: "2px solid var(--accent)",
+          borderRadius: 16,
+          padding: "20px 18px",
+          marginBottom: 18,
+          boxShadow:
+            "0 0 24px rgba(255,100,0,0.25), 0 4px 12px rgba(0,0,0,0.3)",
         }}
       >
-        <h2 className="view-title" style={{ margin: 0 }}>
-          ⚔️ Matches
-        </h2>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <span style={{ fontSize: "1.5rem" }}>🏠</span>
+          <div>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: "1.05rem",
+                color: "var(--accent)",
+                letterSpacing: 1,
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              CREATE ROOM
+            </div>
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--muted)",
+                marginTop: 2,
+              }}
+            >
+              Select game mode and create a new match room
+            </div>
+          </div>
+        </div>
+
+        <select
+          className="fire-input"
+          value={newMode}
+          onChange={(e) => setNewMode(e.target.value)}
+          style={{
+            marginBottom: 12,
+            appearance: "auto",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+          }}
+          data-ocid="admin.matches.select"
+        >
+          {GAME_MODES.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.emoji} {m.label} — Entry ₹{m.entryFee} | Prize ₹{m.prizePool}
+            </option>
+          ))}
+        </select>
+
+        {/* Show selected mode info */}
+        {(() => {
+          const sel = GAME_MODES.find((m) => m.id === newMode);
+          if (!sel) return null;
+          return (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                marginBottom: 12,
+              }}
+            >
+              {[
+                {
+                  label: "Entry Fee",
+                  val: `₹${sel.entryFee}`,
+                  color: "#f87171",
+                },
+                {
+                  label: "Prize Pool",
+                  val: `₹${sel.prizePool}`,
+                  color: "#22c55e",
+                },
+                {
+                  label: "Max Players",
+                  val: `${(sel as any).maxPlayers ?? 2}`,
+                  color: "var(--accent)",
+                },
+                ...((sel as any).perKill
+                  ? [
+                      {
+                        label: "Per Kill",
+                        val: `₹${(sel as any).perKill}`,
+                        color: "#fbbf24",
+                      },
+                    ]
+                  : []),
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    borderRadius: 8,
+                    padding: "4px 10px",
+                    fontSize: "0.75rem",
+                    color: item.color,
+                    fontWeight: 700,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  {item.label}: {item.val}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         <button
           type="button"
           className="fire-btn"
-          style={{ width: "auto", padding: "8px 16px", fontSize: "0.85rem" }}
-          onClick={() => setCreating(!creating)}
-          data-ocid="admin.matches.open_modal_button"
+          onClick={createMatch}
+          data-ocid="admin.matches.confirm_button"
+          style={{
+            background: "linear-gradient(90deg, #ff6600, #ff3300)",
+            fontFamily: "Orbitron, sans-serif",
+            fontWeight: 800,
+            fontSize: "1rem",
+            letterSpacing: 1,
+            boxShadow: "0 0 16px rgba(255,100,0,0.5)",
+            border: "none",
+          }}
         >
-          + Create Match
+          🚀 CREATE ROOM
         </button>
       </div>
 
-      {creating && (
-        <div
-          className="card"
-          style={{ marginBottom: 12 }}
-          data-ocid="admin.matches.modal"
-        >
-          <div className="section-label">Create New Match</div>
-          <select
-            className="fire-input"
-            value={newMode}
-            onChange={(e) => setNewMode(e.target.value)}
-            style={{ marginBottom: 8, appearance: "auto" }}
-            data-ocid="admin.matches.select"
-          >
-            {GAME_MODES.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.emoji} {m.label} — ₹{m.entryFee} / ₹{m.prizePool}
-              </option>
-            ))}
-          </select>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              type="button"
-              className="fire-btn"
-              onClick={createMatch}
-              data-ocid="admin.matches.confirm_button"
-            >
-              Create
-            </button>
-            <button
-              type="button"
-              className="fire-btn fire-btn-secondary"
-              onClick={() => setCreating(false)}
-              data-ocid="admin.matches.cancel_button"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <h2 className="view-title" style={{ marginBottom: 10 }}>
+        ⚔️ All Matches
+      </h2>
 
       <div
         style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}
@@ -4373,6 +4843,11 @@ function AdminMatchesView({
               <LiveTimer startedAt={m.startedAt} />
             </div>
           )}
+          {m.status === "waiting" && m.scheduledTime && (
+            <div style={{ marginTop: 4 }}>
+              <ScheduleCountdown scheduledTime={m.scheduledTime} />
+            </div>
+          )}
           {expanded === m.id && (
             <div
               style={{
@@ -4431,6 +4906,62 @@ function AdminMatchesView({
                     Assign
                   </button>
                 </div>
+              </div>
+              {/* Schedule Start Time */}
+              <div style={{ marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--muted)",
+                    marginBottom: 4,
+                  }}
+                >
+                  ⏰ Schedule Start Time
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    type="datetime-local"
+                    className="fire-input"
+                    style={{ flex: 1 }}
+                    value={
+                      scheduleInputs[m.id] ||
+                      (m.scheduledTime
+                        ? new Date(m.scheduledTime).toISOString().slice(0, 16)
+                        : "")
+                    }
+                    onChange={(e) =>
+                      setScheduleInputs((prev) => ({
+                        ...prev,
+                        [m.id]: e.target.value,
+                      }))
+                    }
+                    data-ocid={`admin.matches.schedule.input.${i + 1}`}
+                  />
+                  <button
+                    type="button"
+                    className="fire-btn fire-btn-warning"
+                    style={{
+                      width: "auto",
+                      padding: "6px 12px",
+                      fontSize: "0.78rem",
+                    }}
+                    onClick={() => setSchedule(m.id)}
+                    data-ocid={`admin.matches.schedule.button.${i + 1}`}
+                  >
+                    Set Time
+                  </button>
+                </div>
+                {m.scheduledTime && (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#f59e0b",
+                      marginTop: 4,
+                    }}
+                  >
+                    Scheduled: {new Date(m.scheduledTime).toLocaleString()}
+                  </div>
+                )}
               </div>
               {/* Match actions */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
