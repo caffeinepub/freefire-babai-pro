@@ -214,6 +214,51 @@ const GAME_MODES = [
   },
 ];
 
+// ─── Fixed Time Slots 5:00 PM – 10:00 PM (15-min gap) ────────────────────────
+const FIXED_TIME_SLOTS: string[] = (() => {
+  const slots: string[] = [];
+  for (let h = 17; h <= 22; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 22 && m > 0) break;
+      const hh = String(h).padStart(2, "0");
+      const mm = String(m).padStart(2, "0");
+      slots.push(`${hh}:${mm}`);
+    }
+  }
+  return slots;
+})();
+
+function getNextFixedSlotTimestamp(): number {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  for (const slot of FIXED_TIME_SLOTS) {
+    const [h, m] = slot.split(":").map(Number);
+    const slotTime = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      h,
+      m,
+      0,
+      0,
+    );
+    if (slotTime.getTime() > now.getTime()) return slotTime.getTime();
+  }
+  // All slots passed today → use tomorrow's first slot
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [h, m] = FIXED_TIME_SLOTS[0].split(":").map(Number);
+  return new Date(
+    tomorrow.getFullYear(),
+    tomorrow.getMonth(),
+    tomorrow.getDate(),
+    h,
+    m,
+    0,
+    0,
+  ).getTime();
+}
+
 // ─── Loading Overlay ──────────────────────────────────────────────────────────
 function LoadingOverlay() {
   return (
@@ -1576,184 +1621,170 @@ function DashboardView({
                 <ScheduleCountdown scheduledTime={m.scheduledTime} />
               )}
 
-              {/* ── Room ID & Password Button ── */}
-              {m.roomId || m.roomPass ? (
-                <div style={{ marginTop: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowRoomMap((prev) => ({
-                        ...prev,
-                        [m.id]: !prev[m.id],
-                      }))
-                    }
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "linear-gradient(135deg, #ff6b00, #ff9a00)",
-                      border: "2px solid #ffb347",
-                      borderRadius: 10,
-                      color: "#fff",
-                      fontFamily: "Orbitron, sans-serif",
-                      fontWeight: 800,
-                      fontSize: "0.8rem",
-                      letterSpacing: "0.06em",
-                      cursor: "pointer",
-                      boxShadow:
-                        "0 0 16px rgba(255,107,0,0.6), 0 0 6px rgba(255,107,0,0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                    }}
-                    data-ocid="dashboard.primary_button"
-                  >
-                    🔑{" "}
-                    {showRoomMap[m.id]
-                      ? "HIDE ROOM INFO"
-                      : "VIEW ROOM ID & PASSWORD"}
-                  </button>
+              {/* ── Room ID & Password — Always Visible ── */}
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowRoomMap((prev) => ({
+                      ...prev,
+                      [m.id]: !prev[m.id],
+                    }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    background: m.roomId
+                      ? "linear-gradient(135deg, #ff6b00, #ff9a00)"
+                      : "rgba(255,107,0,0.25)",
+                    border: "2px solid #ffb347",
+                    borderRadius: 10,
+                    color: "#fff",
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "0.8rem",
+                    letterSpacing: "0.06em",
+                    cursor: "pointer",
+                    boxShadow: m.roomId
+                      ? "0 0 16px rgba(255,107,0,0.6), 0 0 6px rgba(255,107,0,0.3)"
+                      : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                  data-ocid="dashboard.primary_button"
+                >
+                  🔑{" "}
+                  {showRoomMap[m.id]
+                    ? "HIDE ROOM INFO"
+                    : "VIEW ROOM ID & PASSWORD"}
+                </button>
 
-                  {showRoomMap[m.id] && (
+                {showRoomMap[m.id] && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      background: "linear-gradient(135deg, #1a0533, #0d1a3a)",
+                      border: "2px solid rgba(255,107,0,0.6)",
+                      borderRadius: 12,
+                      padding: "14px 12px",
+                      boxShadow: "0 0 18px rgba(255,107,0,0.3)",
+                    }}
+                  >
                     <div
                       style={{
-                        marginTop: 10,
-                        background: "linear-gradient(135deg, #1a0533, #0d1a3a)",
-                        border: "2px solid rgba(255,107,0,0.6)",
-                        borderRadius: 12,
-                        padding: "14px 12px",
-                        boxShadow: "0 0 18px rgba(255,107,0,0.3)",
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 10,
                       }}
                     >
                       <div
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 10,
+                          background: "rgba(255,107,0,0.1)",
+                          border: "1.5px solid rgba(255,107,0,0.5)",
+                          borderRadius: 8,
+                          padding: "10px 10px 8px",
                         }}
                       >
                         <div
                           style={{
-                            background: "rgba(255,107,0,0.1)",
-                            border: "1.5px solid rgba(255,107,0,0.5)",
-                            borderRadius: 8,
-                            padding: "10px 10px 8px",
+                            fontSize: "0.6rem",
+                            color: "#ff9a00",
+                            fontFamily: "Orbitron, sans-serif",
+                            letterSpacing: 1,
+                            marginBottom: 4,
+                            textTransform: "uppercase",
                           }}
                         >
-                          <div
-                            style={{
-                              fontSize: "0.6rem",
-                              color: "#ff9a00",
-                              fontFamily: "Orbitron, sans-serif",
-                              letterSpacing: 1,
-                              marginBottom: 4,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Room ID
-                          </div>
-                          <div
-                            style={{
-                              fontWeight: 800,
-                              fontSize: "1rem",
-                              color: "#fff",
-                              letterSpacing: "0.08em",
-                              marginBottom: 6,
-                            }}
-                          >
-                            {m.roomId || "—"}
-                          </div>
-                          {m.roomId && (
-                            <button
-                              type="button"
-                              onClick={() => copyText(m.roomId)}
-                              style={{
-                                background: "var(--accent)",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 5,
-                                padding: "4px 10px",
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              📋 COPY
-                            </button>
-                          )}
+                          Room ID
                         </div>
                         <div
                           style={{
-                            background: "rgba(255,107,0,0.1)",
-                            border: "1.5px solid rgba(255,107,0,0.5)",
-                            borderRadius: 8,
-                            padding: "10px 10px 8px",
+                            fontWeight: 800,
+                            fontSize: "1rem",
+                            color: m.roomId ? "#fff" : "#f59e0b",
+                            letterSpacing: "0.08em",
+                            marginBottom: 6,
                           }}
                         >
-                          <div
-                            style={{
-                              fontSize: "0.6rem",
-                              color: "#ff9a00",
-                              fontFamily: "Orbitron, sans-serif",
-                              letterSpacing: 1,
-                              marginBottom: 4,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Password
-                          </div>
-                          <div
-                            style={{
-                              fontWeight: 800,
-                              fontSize: "1rem",
-                              color: "#fff",
-                              letterSpacing: "0.08em",
-                              marginBottom: 6,
-                            }}
-                          >
-                            {m.roomPass || "—"}
-                          </div>
-                          {m.roomPass && (
-                            <button
-                              type="button"
-                              onClick={() => copyText(m.roomPass)}
-                              style={{
-                                background: "var(--accent)",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: 5,
-                                padding: "4px 10px",
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              📋 COPY
-                            </button>
-                          )}
+                          {m.roomId || "⏳ Pending..."}
                         </div>
+                        {m.roomId && (
+                          <button
+                            type="button"
+                            onClick={() => copyText(m.roomId)}
+                            style={{
+                              background: "var(--accent)",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 5,
+                              padding: "4px 10px",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            📋 COPY
+                          </button>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          background: "rgba(255,107,0,0.1)",
+                          border: "1.5px solid rgba(255,107,0,0.5)",
+                          borderRadius: 8,
+                          padding: "10px 10px 8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.6rem",
+                            color: "#ff9a00",
+                            fontFamily: "Orbitron, sans-serif",
+                            letterSpacing: 1,
+                            marginBottom: 4,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Password
+                        </div>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            fontSize: "1rem",
+                            color: m.roomPass ? "#fff" : "#f59e0b",
+                            letterSpacing: "0.08em",
+                            marginBottom: 6,
+                          }}
+                        >
+                          {m.roomPass || "⏳ Pending..."}
+                        </div>
+                        {m.roomPass && (
+                          <button
+                            type="button"
+                            onClick={() => copyText(m.roomPass)}
+                            style={{
+                              background: "var(--accent)",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 5,
+                              padding: "4px 10px",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            📋 COPY
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "var(--muted)",
-                    marginTop: 8,
-                    padding: "8px 10px",
-                    background: "rgba(255,255,255,0.04)",
-                    borderRadius: 8,
-                    border: "1px dashed rgba(255,255,255,0.15)",
-                    textAlign: "center",
-                  }}
-                >
-                  ⏳ Waiting for admin to assign Room ID & Password...
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -4398,6 +4429,7 @@ function AdminMatchesView({
         timestamp: new Date(),
         players: [],
         maxPlayers: mode.maxPlayers ?? 2,
+        scheduledTime: getNextFixedSlotTimestamp(),
       });
       await logAdminAction("Created match", mode.id);
       showToast("Match created!");
@@ -4431,12 +4463,27 @@ function AdminMatchesView({
   const setSchedule = async (id: string) => {
     const timeStr = scheduleInputs[id];
     if (!timeStr) {
-      showToast("Enter a valid date/time", "error");
+      showToast("Pick a time slot", "error");
       return;
     }
-    const ts = new Date(timeStr).getTime();
+    const [h, m] = timeStr.split(":").map(Number);
+    const now = new Date();
+    const slotDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      h,
+      m,
+      0,
+      0,
+    );
+    if (slotDate.getTime() < now.getTime()) {
+      // already passed today → use tomorrow
+      slotDate.setDate(slotDate.getDate() + 1);
+    }
+    const ts = slotDate.getTime();
     if (Number.isNaN(ts)) {
-      showToast("Invalid date/time", "error");
+      showToast("Invalid slot", "error");
       return;
     }
     setIsLoading(true);
@@ -4818,6 +4865,62 @@ function AdminMatchesView({
                   </span>
                 </div>
               )}
+              {m.players && m.players.length > 0 && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    padding: "8px 10px",
+                    background: "rgba(255,107,0,0.08)",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,107,0,0.25)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "#ff9a00",
+                      fontWeight: 700,
+                      marginBottom: 4,
+                    }}
+                  >
+                    👤 Joined Players:
+                  </div>
+                  {m.players.map((uid: string, idx: number) => (
+                    <div
+                      key={uid}
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#fff",
+                        padding: "3px 6px",
+                        marginBottom: 2,
+                        background: "rgba(255,255,255,0.06)",
+                        borderRadius: 5,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#f59e0b",
+                          fontWeight: 700,
+                          minWidth: 18,
+                        }}
+                      >
+                        #{idx + 1}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "Rajdhani, sans-serif",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {uid}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span className={`badge ${statusClass(m.status)}`}>
@@ -4907,7 +5010,7 @@ function AdminMatchesView({
                   </button>
                 </div>
               </div>
-              {/* Schedule Start Time */}
+              {/* Fixed Schedule Slot */}
               <div style={{ marginBottom: 8 }}>
                 <div
                   style={{
@@ -4916,17 +5019,19 @@ function AdminMatchesView({
                     marginBottom: 4,
                   }}
                 >
-                  ⏰ Schedule Start Time
+                  ⏰ Schedule Slot (5PM–10PM fixed)
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    type="datetime-local"
+                  <select
                     className="fire-input"
                     style={{ flex: 1 }}
                     value={
                       scheduleInputs[m.id] ||
                       (m.scheduledTime
-                        ? new Date(m.scheduledTime).toISOString().slice(0, 16)
+                        ? (() => {
+                            const d = new Date(m.scheduledTime);
+                            return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                          })()
                         : "")
                     }
                     onChange={(e) =>
@@ -4936,7 +5041,14 @@ function AdminMatchesView({
                       }))
                     }
                     data-ocid={`admin.matches.schedule.input.${i + 1}`}
-                  />
+                  >
+                    <option value="">-- Pick Slot --</option>
+                    {FIXED_TIME_SLOTS.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot} {Number.parseInt(slot) < 12 ? "AM" : "PM"}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     className="fire-btn fire-btn-warning"
@@ -4948,7 +5060,7 @@ function AdminMatchesView({
                     onClick={() => setSchedule(m.id)}
                     data-ocid={`admin.matches.schedule.button.${i + 1}`}
                   >
-                    Set Time
+                    Set
                   </button>
                 </div>
                 {m.scheduledTime && (
@@ -4959,7 +5071,12 @@ function AdminMatchesView({
                       marginTop: 4,
                     }}
                   >
-                    Scheduled: {new Date(m.scheduledTime).toLocaleString()}
+                    🕐 Scheduled:{" "}
+                    {new Date(m.scheduledTime).toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
                   </div>
                 )}
               </div>
