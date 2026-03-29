@@ -93,7 +93,6 @@ interface MatchData {
   roomPass: string;
   timestamp: unknown;
   startedAt?: number;
-  scheduledTime?: number;
   players?: string[];
   maxPlayers?: number;
 }
@@ -213,51 +212,6 @@ const GAME_MODES = [
     poster: "/assets/generated/mode-highstakes.dim_160x100.jpg",
   },
 ];
-
-// ─── Fixed Time Slots 5:00 PM – 10:00 PM (15-min gap) ────────────────────────
-const FIXED_TIME_SLOTS: string[] = (() => {
-  const slots: string[] = [];
-  for (let h = 17; h <= 22; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      if (h === 22 && m > 0) break;
-      const hh = String(h).padStart(2, "0");
-      const mm = String(m).padStart(2, "0");
-      slots.push(`${hh}:${mm}`);
-    }
-  }
-  return slots;
-})();
-
-function getNextFixedSlotTimestamp(): number {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  for (const slot of FIXED_TIME_SLOTS) {
-    const [h, m] = slot.split(":").map(Number);
-    const slotTime = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      h,
-      m,
-      0,
-      0,
-    );
-    if (slotTime.getTime() > now.getTime()) return slotTime.getTime();
-  }
-  // All slots passed today → use tomorrow's first slot
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const [h, m] = FIXED_TIME_SLOTS[0].split(":").map(Number);
-  return new Date(
-    tomorrow.getFullYear(),
-    tomorrow.getMonth(),
-    tomorrow.getDate(),
-    h,
-    m,
-    0,
-    0,
-  ).getTime();
-}
 
 // ─── Loading Overlay ──────────────────────────────────────────────────────────
 function LoadingOverlay() {
@@ -1313,7 +1267,6 @@ function DashboardView({
                   ...m,
                   roomId: refData.roomId || "",
                   roomPass: refData.roomPass || "",
-                  scheduledTime: refData.scheduledTime || m.scheduledTime,
                 };
               }
             } catch (_) {
@@ -1617,9 +1570,6 @@ function DashboardView({
                 </span>
               </div>
               {m.status === "live" && <LiveTimer startedAt={m.startedAt} />}
-              {m.status === "waiting" && m.scheduledTime && (
-                <ScheduleCountdown scheduledTime={m.scheduledTime} />
-              )}
 
               {/* ── Room ID & Password — Always Visible ── */}
               <div style={{ marginTop: 8 }}>
@@ -2674,9 +2624,6 @@ function MatchHistoryView({
             {(m.status === "live" || m.status === "waiting") && (
               <div style={{ marginBottom: 8 }}>
                 {m.status === "live" && <LiveTimer startedAt={m.startedAt} />}
-                {m.status === "waiting" && m.scheduledTime && (
-                  <ScheduleCountdown scheduledTime={m.scheduledTime} />
-                )}
                 {
                   <div
                     style={{
@@ -3674,59 +3621,6 @@ function LiveTimer({ startedAt }: { startedAt?: number }) {
   );
 }
 
-function ScheduleCountdown({ scheduledTime }: { scheduledTime?: number }) {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!scheduledTime) return;
-    const update = () =>
-      setRemaining(
-        Math.max(0, Math.floor((scheduledTime - Date.now()) / 1000)),
-      );
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [scheduledTime]);
-
-  if (!scheduledTime) return null;
-
-  if (remaining <= 0) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: "0.82rem",
-          color: "#f59e0b",
-          fontWeight: 700,
-        }}
-      >
-        ⏰ Room starting soon...
-      </div>
-    );
-  }
-
-  const h = Math.floor(remaining / 3600);
-  const m = Math.floor((remaining % 3600) / 60);
-  const s = remaining % 60;
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        fontSize: "0.82rem",
-        color: "#f59e0b",
-        fontWeight: 700,
-      }}
-    >
-      ⏰ Starts in: {h > 0 ? `${h}h ` : ""}
-      {m}m {s}s
-    </div>
-  );
-}
-
 // ─── Admin Types ──────────────────────────────────────────────────────────────
 type AdminView =
   | "admin-dashboard"
@@ -4383,9 +4277,6 @@ function AdminMatchesView({
   const [roomInputs, setRoomInputs] = useState<
     Record<string, { roomId: string; roomPass: string }>
   >({});
-  const [scheduleInputs, setScheduleInputs] = useState<Record<string, string>>(
-    {},
-  );
   const [winnerInput, setWinnerInput] = useState<Record<string, string>>({});
   const [killInputs, setKillInputs] = useState<
     Record<string, Record<string, string>>
@@ -4429,7 +4320,6 @@ function AdminMatchesView({
         timestamp: new Date(),
         players: [],
         maxPlayers: mode.maxPlayers ?? 2,
-        scheduledTime: getNextFixedSlotTimestamp(),
       });
       await logAdminAction("Created match", mode.id);
       showToast("Match created!");
@@ -4446,51 +4336,27 @@ function AdminMatchesView({
     const inp = roomInputs[id] || { roomId: "", roomPass: "" };
     setIsLoading(true);
     try {
+      // Update admin room doc
       await updateDoc(doc(db, "matches", id), {
         roomId: inp.roomId,
         roomPass: inp.roomPass,
       });
+      // Also update all player match docs that have roomRef pointing to this admin room
+      const playerMatchQ = query(
+        collection(db, "matches"),
+        where("roomRef", "==", id),
+      );
+      const playerMatchSnap = await getDocs(playerMatchQ);
+      await Promise.all(
+        playerMatchSnap.docs.map((pd) =>
+          updateDoc(doc(db, "matches", pd.id), {
+            roomId: inp.roomId,
+            roomPass: inp.roomPass,
+          }),
+        ),
+      );
       await logAdminAction("Assigned room", id);
-      showToast("Room assigned!");
-      load();
-    } catch (_) {
-      showToast("Error", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const setSchedule = async (id: string) => {
-    const timeStr = scheduleInputs[id];
-    if (!timeStr) {
-      showToast("Pick a time slot", "error");
-      return;
-    }
-    const [h, m] = timeStr.split(":").map(Number);
-    const now = new Date();
-    const slotDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      h,
-      m,
-      0,
-      0,
-    );
-    if (slotDate.getTime() < now.getTime()) {
-      // already passed today → use tomorrow
-      slotDate.setDate(slotDate.getDate() + 1);
-    }
-    const ts = slotDate.getTime();
-    if (Number.isNaN(ts)) {
-      showToast("Invalid slot", "error");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await updateDoc(doc(db, "matches", id), { scheduledTime: ts });
-      await logAdminAction("Set schedule", id);
-      showToast("Schedule set!");
+      showToast("Room assigned! Players notified.");
       load();
     } catch (_) {
       showToast("Error", "error");
@@ -4946,11 +4812,6 @@ function AdminMatchesView({
               <LiveTimer startedAt={m.startedAt} />
             </div>
           )}
-          {m.status === "waiting" && m.scheduledTime && (
-            <div style={{ marginTop: 4 }}>
-              <ScheduleCountdown scheduledTime={m.scheduledTime} />
-            </div>
-          )}
           {expanded === m.id && (
             <div
               style={{
@@ -5009,76 +4870,6 @@ function AdminMatchesView({
                     Assign
                   </button>
                 </div>
-              </div>
-              {/* Fixed Schedule Slot */}
-              <div style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "var(--muted)",
-                    marginBottom: 4,
-                  }}
-                >
-                  ⏰ Schedule Slot (5PM–10PM fixed)
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <select
-                    className="fire-input"
-                    style={{ flex: 1 }}
-                    value={
-                      scheduleInputs[m.id] ||
-                      (m.scheduledTime
-                        ? (() => {
-                            const d = new Date(m.scheduledTime);
-                            return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                          })()
-                        : "")
-                    }
-                    onChange={(e) =>
-                      setScheduleInputs((prev) => ({
-                        ...prev,
-                        [m.id]: e.target.value,
-                      }))
-                    }
-                    data-ocid={`admin.matches.schedule.input.${i + 1}`}
-                  >
-                    <option value="">-- Pick Slot --</option>
-                    {FIXED_TIME_SLOTS.map((slot) => (
-                      <option key={slot} value={slot}>
-                        {slot} {Number.parseInt(slot) < 12 ? "AM" : "PM"}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="fire-btn fire-btn-warning"
-                    style={{
-                      width: "auto",
-                      padding: "6px 12px",
-                      fontSize: "0.78rem",
-                    }}
-                    onClick={() => setSchedule(m.id)}
-                    data-ocid={`admin.matches.schedule.button.${i + 1}`}
-                  >
-                    Set
-                  </button>
-                </div>
-                {m.scheduledTime && (
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#f59e0b",
-                      marginTop: 4,
-                    }}
-                  >
-                    🕐 Scheduled:{" "}
-                    {new Date(m.scheduledTime).toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    })}
-                  </div>
-                )}
               </div>
               {/* Match actions */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
