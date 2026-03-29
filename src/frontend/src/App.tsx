@@ -138,7 +138,7 @@ const GAME_MODES = [
     entryFee: 25,
     prizePool: 40,
     desc: "Solo vs Solo",
-    poster: "/assets/generated/mode-1v1.dim_160x100.jpg",
+    poster: "/assets/generated/poster-1v1.dim_320x180.jpg",
   },
   {
     id: "2v2",
@@ -148,6 +148,7 @@ const GAME_MODES = [
     entryFee: 50,
     prizePool: 90,
     desc: "Duo Battle",
+    poster: "/assets/generated/poster-2v2.dim_320x180.jpg",
   },
   {
     id: "squad",
@@ -157,7 +158,7 @@ const GAME_MODES = [
     entryFee: 100,
     prizePool: 360,
     desc: "4-Player War",
-    poster: "/assets/generated/mode-squad.dim_160x100.jpg",
+    poster: "/assets/generated/poster-squad-4v4.dim_320x180.jpg",
   },
   {
     id: "clash",
@@ -167,6 +168,7 @@ const GAME_MODES = [
     entryFee: 30,
     prizePool: 50,
     desc: "Clash Battle",
+    poster: "/assets/generated/poster-clash.dim_320x180.jpg",
   },
   {
     id: "br-solo",
@@ -178,6 +180,7 @@ const GAME_MODES = [
     perKill: 3,
     winnerBonus: 20,
     desc: "Battle Royale Solo",
+    poster: "/assets/generated/poster-br-solo.dim_320x180.jpg",
   },
   {
     id: "br-duo",
@@ -189,6 +192,7 @@ const GAME_MODES = [
     perKill: 5,
     winnerBonus: 30,
     desc: "Battle Royale Duo",
+    poster: "/assets/generated/poster-br-duo.dim_320x180.jpg",
   },
   {
     id: "br-squad",
@@ -200,6 +204,7 @@ const GAME_MODES = [
     perKill: 6,
     winnerBonus: 80,
     desc: "Battle Royale Squad",
+    poster: "/assets/generated/poster-br-squad.dim_320x180.jpg",
   },
   {
     id: "highstakes",
@@ -209,7 +214,7 @@ const GAME_MODES = [
     entryFee: 200,
     prizePool: 360,
     desc: "Big Money Match",
-    poster: "/assets/generated/mode-highstakes.dim_160x100.jpg",
+    poster: "/assets/generated/poster-highstakes.dim_320x180.jpg",
   },
 ];
 
@@ -1256,7 +1261,7 @@ function DashboardView({
       // For matches with a roomRef, merge roomId/roomPass from the admin room doc
       const enriched = await Promise.all(
         matches.map(async (m) => {
-          if ((m as any).roomRef && !m.roomId) {
+          if ((m as any).roomRef) {
             try {
               const refSnap = await getDoc(
                 doc(db, "matches", (m as any).roomRef),
@@ -1423,8 +1428,8 @@ function DashboardView({
             padding: "14px 20px",
             marginBottom: 16,
             borderRadius: 14,
-            border: "2px solid #FFD700",
-            background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+            border: "2px solid #ff6b00",
+            background: "linear-gradient(135deg, #ff6b00 0%, #ff6b00 100%)",
             color: "#1a1a1a",
             fontFamily: '"Orbitron", sans-serif',
             fontWeight: 700,
@@ -1450,18 +1455,20 @@ function DashboardView({
       <div
         style={{
           position: "relative",
-          borderRadius: 14,
+          borderRadius: 16,
           overflow: "hidden",
           marginBottom: 16,
-          border: "1px solid rgba(251,140,0,0.3)",
+          border: "1px solid rgba(255,140,0,0.3)",
+          boxShadow:
+            "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,140,0,0.08)",
         }}
       >
         <img
-          src="/assets/generated/ff-banner-bg.dim_480x120.jpg"
-          alt="Tournament"
+          src="/assets/generated/brand-hero-banner.dim_480x200.jpg"
+          alt="MR.SONIC FF Tournament"
           style={{
             width: "100%",
-            height: 110,
+            height: 140,
             objectFit: "cover",
             display: "block",
           }}
@@ -1471,33 +1478,60 @@ function DashboardView({
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(135deg, rgba(230,92,0,0.6) 0%, rgba(0,0,0,0.4) 100%)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            padding: "0 20px",
+              "linear-gradient(135deg, rgba(8,12,20,0.65) 0%, rgba(255,107,0,0.18) 100%)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: 16,
+            left: 16,
           }}
         >
           <div
             style={{
               fontFamily: "Orbitron, sans-serif",
-              fontSize: "1rem",
+              fontSize: "1.15rem",
               fontWeight: 900,
               color: "#fff",
-              textShadow: "0 0 12px rgba(251,140,0,0.8)",
+              textShadow: "0 0 20px rgba(255,107,0,0.9)",
+              letterSpacing: "0.05em",
             }}
           >
-            🏆 LIVE TOURNAMENTS
+            🏆 TOURNAMENT ARENA
           </div>
           <div
             style={{
-              fontSize: "0.8rem",
-              color: "rgba(255,220,160,0.9)",
-              marginTop: 4,
+              fontSize: "0.78rem",
+              color: "rgba(255,200,120,0.92)",
+              marginTop: 5,
+              fontWeight: 600,
+              letterSpacing: "0.02em",
             }}
           >
-            Join now & Win real cash prizes!
+            Join & Win Real Cash Prizes
           </div>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            background: "rgba(255,107,0,0.15)",
+            border: "1px solid rgba(255,107,0,0.4)",
+            color: "#ff6b00",
+            fontSize: "0.65rem",
+            fontWeight: 700,
+            fontFamily: "Orbitron, sans-serif",
+            padding: "4px 10px",
+            borderRadius: 20,
+            backdropFilter: "blur(6px)",
+            letterSpacing: "0.06em",
+            boxShadow: "0 0 12px rgba(255,107,0,0.2)",
+            animation: "live-pulse 1.8s infinite",
+          }}
+        >
+          ● LIVE
         </div>
       </div>
 
@@ -1615,7 +1649,7 @@ function DashboardView({
                   <div
                     style={{
                       marginTop: 10,
-                      background: "linear-gradient(135deg, #1a0533, #0d1a3a)",
+                      background: "linear-gradient(135deg, #0e1420, #0d1a3a)",
                       border: "2px solid rgba(255,107,0,0.6)",
                       borderRadius: 12,
                       padding: "14px 12px",
@@ -1759,58 +1793,82 @@ function DashboardView({
             data-ocid="dashboard.primary_button"
             style={{ padding: 0, overflow: "hidden" }}
           >
-            {(mode as typeof mode & { poster?: string }).poster ? (
-              <div
-                style={{
-                  position: "relative",
-                  height: 70,
-                  overflow: "hidden",
-                  borderRadius: "11px 11px 0 0",
-                }}
-              >
+            <div
+              style={{
+                position: "relative",
+                height: 80,
+                overflow: "hidden",
+                borderRadius: "13px 13px 0 0",
+              }}
+            >
+              {(mode as typeof mode & { poster?: string }).poster ? (
                 <img
                   src={(mode as typeof mode & { poster?: string }).poster}
                   alt={mode.label}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-                <div
                   style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
                   }}
                 />
+              ) : (
                 <div
                   style={{
-                    position: "absolute",
-                    bottom: 4,
-                    left: 0,
-                    right: 0,
-                    textAlign: "center",
-                    fontSize: "1.1rem",
+                    width: "100%",
+                    height: "100%",
+                    background: "linear-gradient(135deg, #1a0e00, #0e1420)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "2rem",
                   }}
                 >
                   {mode.emoji}
                 </div>
-              </div>
-            ) : (
+              )}
               <div
                 style={{
-                  fontSize: "1.5rem",
-                  padding: "12px 0 4px",
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(to bottom, transparent 30%, rgba(8,12,20,0.92) 100%)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: 5,
+                  right: 5,
+                  background: "rgba(255,107,0,0.85)",
+                  color: "white",
+                  fontSize: "0.58rem",
+                  fontWeight: 700,
+                  fontFamily: "Orbitron, sans-serif",
+                  padding: "2px 6px",
+                  borderRadius: 12,
+                  backdropFilter: "blur(4px)",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                ₹{mode.entryFee}
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 4,
+                  left: 0,
+                  right: 0,
                   textAlign: "center",
+                  fontSize: "0.85rem",
                 }}
               >
                 {mode.emoji}
               </div>
-            )}
-            <div style={{ padding: "8px 8px 10px" }}>
-              <div className="mode-title" style={{ fontSize: "0.72rem" }}>
+            </div>
+            <div style={{ padding: "7px 7px 10px" }}>
+              <div className="mode-title" style={{ fontSize: "0.68rem" }}>
                 {mode.label}
-              </div>
-              <div className="mode-stat">
-                Entry <span>₹{mode.entryFee}</span>
               </div>
               <div className="mode-stat">
                 Prize{" "}
@@ -1819,17 +1877,17 @@ function DashboardView({
                 </span>
               </div>
               {(mode as any).perKill && (
-                <div className="mode-stat" style={{ fontSize: "0.6rem" }}>
+                <div className="mode-stat" style={{ fontSize: "0.58rem" }}>
                   Kill{" "}
-                  <span style={{ color: "#fbbf24" }}>
+                  <span style={{ color: "#ff9a00" }}>
                     ₹{(mode as any).perKill}
                   </span>
                 </div>
               )}
               {(mode as any).winnerBonus && (
-                <div className="mode-stat" style={{ fontSize: "0.6rem" }}>
+                <div className="mode-stat" style={{ fontSize: "0.58rem" }}>
                   Win{" "}
-                  <span style={{ color: "#34d399" }}>
+                  <span style={{ color: "#ff6b00" }}>
                     +₹{(mode as any).winnerBonus}
                   </span>
                 </div>
@@ -1847,7 +1905,7 @@ function DashboardView({
         <div
           style={{
             background:
-              "linear-gradient(135deg, #1a0533 0%, #2d0a4e 40%, #0d1a3a 100%)",
+              "linear-gradient(135deg, #0e1420 0%, #121929 40%, #0d1a3a 100%)",
             border: "2px solid #ff6b00",
             borderRadius: 16,
             padding: "18px 16px",
@@ -1866,7 +1924,7 @@ function DashboardView({
               left: 0,
               right: 0,
               height: 3,
-              background: "linear-gradient(90deg, #ff6b00, #ffe066, #ff6b00)",
+              background: "linear-gradient(90deg, #ff6b00, #ff6b00, #ff6b00)",
               borderRadius: "16px 16px 0 0",
             }}
           />
@@ -1877,7 +1935,7 @@ function DashboardView({
                 fontSize: "0.7rem",
                 fontFamily: "Orbitron, sans-serif",
                 letterSpacing: 2,
-                color: "#ffe066",
+                color: "#ff6b00",
                 textTransform: "uppercase" as const,
                 opacity: 0.9,
               }}
@@ -1953,8 +2011,8 @@ function DashboardView({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background: "rgba(37,211,102,0.12)",
-              border: "1.5px solid rgba(37,211,102,0.5)",
+              background: "rgba(255,107,0,0.12)",
+              border: "1.5px solid rgba(255,107,0,0.5)",
               borderRadius: 10,
               padding: "10px 14px",
               display: "flex",
@@ -1969,7 +2027,7 @@ function DashboardView({
               <div
                 style={{
                   fontSize: "0.65rem",
-                  color: "#25d366",
+                  color: "#ff6b00",
                   fontFamily: "Rajdhani, sans-serif",
                   letterSpacing: 1,
                   marginBottom: 2,
@@ -1984,14 +2042,14 @@ function DashboardView({
                   fontFamily: "Orbitron, sans-serif",
                   color: "#fff",
                   letterSpacing: 1,
-                  textShadow: "0 0 10px rgba(37,211,102,0.7)",
+                  textShadow: "0 0 10px rgba(255,107,0,0.7)",
                 }}
               >
                 7013256124
               </div>
             </div>
             <span
-              style={{ fontSize: "0.75rem", color: "#25d366", fontWeight: 700 }}
+              style={{ fontSize: "0.75rem", color: "#ff6b00", fontWeight: 700 }}
             >
               TAP →
             </span>
@@ -2438,7 +2496,7 @@ function MatchJoinModal({
           </div>
           {(mode as any).perKill && (
             <div className="stat-box">
-              <div className="stat-value" style={{ color: "#fbbf24" }}>
+              <div className="stat-value" style={{ color: "#ff9a00" }}>
                 ₹{(mode as any).perKill}
               </div>
               <div className="stat-label">Per Kill</div>
@@ -2446,7 +2504,7 @@ function MatchJoinModal({
           )}
           {(mode as any).winnerBonus && (
             <div className="stat-box">
-              <div className="stat-value" style={{ color: "#34d399" }}>
+              <div className="stat-value" style={{ color: "#ff6b00" }}>
                 ₹{(mode as any).winnerBonus}
               </div>
               <div className="stat-label">Winner Bonus</div>
@@ -4336,25 +4394,48 @@ function AdminMatchesView({
     const inp = roomInputs[id] || { roomId: "", roomPass: "" };
     setIsLoading(true);
     try {
+      // Get admin room data to know the mode
+      const adminRoomSnap = await getDoc(doc(db, "matches", id));
+      const adminRoomMode = adminRoomSnap.exists()
+        ? adminRoomSnap.data().mode
+        : null;
       // Update admin room doc
       await updateDoc(doc(db, "matches", id), {
         roomId: inp.roomId,
         roomPass: inp.roomPass,
       });
-      // Also update all player match docs that have roomRef pointing to this admin room
+      // Update player match docs that reference this admin room (by roomRef)
       const playerMatchQ = query(
         collection(db, "matches"),
         where("roomRef", "==", id),
       );
       const playerMatchSnap = await getDocs(playerMatchQ);
-      await Promise.all(
-        playerMatchSnap.docs.map((pd) =>
-          updateDoc(doc(db, "matches", pd.id), {
-            roomId: inp.roomId,
-            roomPass: inp.roomPass,
-          }),
-        ),
+      const refUpdates = playerMatchSnap.docs.map((pd) =>
+        updateDoc(doc(db, "matches", pd.id), {
+          roomId: inp.roomId,
+          roomPass: inp.roomPass,
+        }),
       );
+      // Also update player match docs for the same mode (no roomRef — joined before admin created room)
+      let modeUpdates: Promise<void>[] = [];
+      if (adminRoomMode) {
+        const byModeQ = query(
+          collection(db, "matches"),
+          where("mode", "==", adminRoomMode),
+          where("status", "in", ["waiting", "live", "full"]),
+        );
+        const byModeSnap = await getDocs(byModeQ);
+        modeUpdates = byModeSnap.docs
+          .filter((pd) => pd.data().player !== "admin" && !pd.data().roomRef)
+          .map((pd) =>
+            updateDoc(doc(db, "matches", pd.id), {
+              roomId: inp.roomId,
+              roomPass: inp.roomPass,
+              roomRef: id,
+            }),
+          );
+      }
+      await Promise.all([...refUpdates, ...modeUpdates]);
       await logAdminAction("Assigned room", id);
       showToast("Room assigned! Players notified.");
       load();
@@ -4604,7 +4685,7 @@ function AdminMatchesView({
                       {
                         label: "Per Kill",
                         val: `₹${(sel as any).perKill}`,
-                        color: "#fbbf24",
+                        color: "#ff9a00",
                       },
                     ]
                   : []),
