@@ -1242,6 +1242,61 @@ function DashboardView({
   const isAdmin = currentUser === "admin";
   const [activeMatches, setActiveMatches] = useState<MatchData[]>([]);
   const [showRoomMap, setShowRoomMap] = useState<Record<string, boolean>>({});
+  const [modeOccupancy, setModeOccupancy] = useState<
+    Record<
+      string,
+      { count: number; maxPlayers: number; firstPlayerName: string }
+    >
+  >({});
+
+  // Load occupancy for all modes (admin rooms)
+  useEffect(() => {
+    const loadOccupancy = async () => {
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "matches"),
+            where("player", "==", "admin"),
+            where("status", "in", ["waiting", "live", "full"]),
+          ),
+        );
+        const occ: Record<
+          string,
+          { count: number; maxPlayers: number; firstPlayerName: string }
+        > = {};
+        await Promise.all(
+          snap.docs.map(async (d) => {
+            const data = d.data();
+            const players: string[] = data.players || [];
+            let firstName = "";
+            if (players.length > 0) {
+              try {
+                const uSnap = await getDoc(doc(db, "users", players[0]));
+                firstName = uSnap.exists()
+                  ? uSnap.data().inGameName ||
+                    uSnap.data().displayName ||
+                    players[0]
+                  : players[0];
+              } catch (_) {
+                firstName = players[0];
+              }
+            }
+            occ[data.mode] = {
+              count: players.length,
+              maxPlayers: data.maxPlayers || 2,
+              firstPlayerName: firstName,
+            };
+          }),
+        );
+        setModeOccupancy(occ);
+      } catch (_) {
+        /* ignore */
+      }
+    };
+    loadOccupancy();
+    const interval = setInterval(loadOccupancy, 8000);
+    return () => clearInterval(interval);
+  }, []);
   const copyText = (text: string) => {
     navigator.clipboard.writeText(text).then(() => showToast("Copied! ✅"));
   };
@@ -1866,19 +1921,46 @@ function DashboardView({
                 {mode.emoji}
               </div>
             </div>
-            <div style={{ padding: "7px 7px 10px" }}>
-              <div className="mode-title" style={{ fontSize: "0.68rem" }}>
+            <div
+              style={{
+                padding: "7px 7px 10px",
+                background:
+                  "linear-gradient(180deg, rgba(8,12,20,0.95) 0%, rgba(14,20,32,1) 100%)",
+              }}
+            >
+              <div
+                className="mode-title"
+                style={{
+                  fontSize: "0.68rem",
+                  letterSpacing: "0.05em",
+                  textShadow: "0 0 8px rgba(255,107,0,0.6)",
+                }}
+              >
                 {mode.label}
               </div>
               <div className="mode-stat">
-                Prize{" "}
-                <span style={{ color: "var(--success)" }}>
+                <span
+                  style={{
+                    color: "rgba(180,180,180,0.7)",
+                    fontSize: "0.55rem",
+                  }}
+                >
+                  PRIZE{" "}
+                </span>
+                <span style={{ color: "#4ade80", fontWeight: 800 }}>
                   ₹{mode.prizePool}
                 </span>
               </div>
               {(mode as any).perKill && (
                 <div className="mode-stat" style={{ fontSize: "0.58rem" }}>
-                  Kill{" "}
+                  <span
+                    style={{
+                      color: "rgba(180,180,180,0.7)",
+                      fontSize: "0.52rem",
+                    }}
+                  >
+                    KILL{" "}
+                  </span>
                   <span style={{ color: "#ff9a00" }}>
                     ₹{(mode as any).perKill}
                   </span>
@@ -1892,6 +1974,50 @@ function DashboardView({
                   </span>
                 </div>
               )}
+              {(() => {
+                const occ = modeOccupancy[mode.id];
+                if (!occ)
+                  return (
+                    <div
+                      style={{
+                        fontSize: "0.58rem",
+                        color: "rgba(100,200,100,0.8)",
+                        marginTop: 3,
+                        fontWeight: 600,
+                      }}
+                    >
+                      🟢 Open
+                    </div>
+                  );
+                const isFull = occ.count >= occ.maxPlayers;
+                return (
+                  <div style={{ marginTop: 3 }}>
+                    <div
+                      style={{
+                        fontSize: "0.55rem",
+                        color: isFull ? "#f87171" : "#ff9a00",
+                        fontWeight: 700,
+                      }}
+                    >
+                      👥 {occ.count}/{occ.maxPlayers} {isFull ? "🔒FULL" : ""}
+                    </div>
+                    {occ.count > 0 && !isFull && occ.firstPlayerName && (
+                      <div
+                        style={{
+                          fontSize: "0.5rem",
+                          color: "rgba(255,200,100,0.9)",
+                          marginTop: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        P1: {occ.firstPlayerName}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </button>
         ))}
@@ -2354,6 +2480,52 @@ function MatchJoinModal({
   setIsLoading: (v: boolean) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
 }) {
+  const [joinedPlayers, setJoinedPlayers] = useState<
+    { uid: string; name: string }[]
+  >([]);
+  const [roomSlots, setRoomSlots] = useState({
+    count: 0,
+    max: mode.maxPlayers ?? 2,
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const roomQ = query(
+          collection(db, "matches"),
+          where("mode", "==", mode.id),
+          where("status", "in", ["waiting", "full"]),
+          where("player", "==", "admin"),
+        );
+        const roomSnap = await getDocs(roomQ);
+        if (!roomSnap.empty) {
+          const roomData = roomSnap.docs[0].data();
+          const players: string[] = roomData.players || [];
+          setRoomSlots({
+            count: players.length,
+            max: (roomData.maxPlayers || mode.maxPlayers) ?? 2,
+          });
+          const names = await Promise.all(
+            players.map(async (uid: string) => {
+              try {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                const name = uSnap.exists()
+                  ? uSnap.data().inGameName || uSnap.data().displayName || uid
+                  : uid;
+                return { uid, name };
+              } catch (_) {
+                return { uid, name: uid };
+              }
+            }),
+          );
+          setJoinedPlayers(names);
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    })();
+  }, [mode.id, mode.maxPlayers]);
+
   const join = async () => {
     if (coins < mode.entryFee) {
       showToast(`Insufficient balance. Need ₹${mode.entryFee}`, "error");
@@ -2394,8 +2566,8 @@ function MatchJoinModal({
             status: "waiting",
             entryFee: mode.entryFee,
             prizePool: mode.prizePool,
-            roomId: "",
-            roomPass: "",
+            roomId: roomData.roomId || "",
+            roomPass: roomData.roomPass || "",
             timestamp: new Date(),
             roomRef: roomDoc.id,
           }),
@@ -2511,6 +2683,110 @@ function MatchJoinModal({
             </div>
           )}
         </div>
+        {/* Slot occupancy display */}
+        <div
+          style={{
+            marginBottom: 14,
+            background: "rgba(255,107,0,0.08)",
+            border: "1.5px solid rgba(255,107,0,0.3)",
+            borderRadius: 12,
+            padding: "10px 12px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: joinedPlayers.length > 0 ? 8 : 0,
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "#ff9a00",
+                fontFamily: "Orbitron, sans-serif",
+                fontWeight: 700,
+              }}
+            >
+              👥 PLAYERS JOINED
+            </span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                color:
+                  roomSlots.count >= roomSlots.max
+                    ? "#f87171"
+                    : "var(--success)",
+              }}
+            >
+              {roomSlots.count}/{roomSlots.max}{" "}
+              {roomSlots.count >= roomSlots.max ? "🔒 FULL" : "🟢 OPEN"}
+            </span>
+          </div>
+          {joinedPlayers.length === 0 ? (
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--muted)",
+                textAlign: "center",
+                paddingTop: 4,
+              }}
+            >
+              No players yet — be the first!
+            </div>
+          ) : (
+            joinedPlayers.map((p, i) => (
+              <div
+                key={p.uid}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "5px 8px",
+                  background: "rgba(255,255,255,0.05)",
+                  borderRadius: 8,
+                  marginBottom: 4,
+                }}
+              >
+                <span
+                  style={{
+                    color: "#f59e0b",
+                    fontWeight: 700,
+                    fontSize: "0.7rem",
+                    minWidth: 22,
+                  }}
+                >
+                  #{i + 1}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      color: "#fff",
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: "0.62rem", color: "var(--muted)" }}>
+                    UID: {p.uid}
+                  </div>
+                </div>
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    color: "#ff6b00",
+                    fontFamily: "Orbitron, sans-serif",
+                  }}
+                >
+                  IN ROOM
+                </span>
+              </div>
+            ))
+          )}
+        </div>
         <div
           style={{
             fontSize: "0.8rem",
@@ -2529,10 +2805,12 @@ function MatchJoinModal({
           type="button"
           className="fire-btn"
           onClick={join}
-          disabled={coins < mode.entryFee}
+          disabled={coins < mode.entryFee || roomSlots.count >= roomSlots.max}
           data-ocid="match.confirm_button"
         >
-          Confirm Join — ₹{mode.entryFee}
+          {roomSlots.count >= roomSlots.max
+            ? "🔒 Room Full"
+            : `Confirm Join — ₹${mode.entryFee}`}
         </button>
         <button
           type="button"
@@ -2545,6 +2823,270 @@ function MatchJoinModal({
         </button>
       </motion.div>
     </motion.div>
+  );
+}
+
+// ─── Schedule Section ─────────────────────────────────────────────────────────
+function ScheduleSection() {
+  // Generate time slots 5:00 PM to 11:00 PM with 15-min match + 15-min break
+  const slots: { matchTime: string; breakEnd: string; slotIndex: number }[] =
+    [];
+  let hour = 17; // 5 PM
+  let minute = 0;
+  let idx = 1;
+  while (hour < 23) {
+    const _matchH = hour.toString().padStart(2, "0");
+    const _matchM = minute.toString().padStart(2, "0");
+    const ampm = hour < 12 ? "AM" : "PM";
+    const displayH = hour > 12 ? hour - 12 : hour;
+    const matchDisplay = `${displayH}:${minute.toString().padStart(2, "0")} ${ampm}`;
+
+    // Break ends 15 mins after match slot (match duration assumed 15 mins, break 15 mins)
+    let bMin = minute + 15;
+    let bHour = hour;
+    if (bMin >= 60) {
+      bMin -= 60;
+      bHour++;
+    }
+    const breakAmpm = bHour < 12 ? "AM" : "PM";
+    const breakDisplayH = bHour > 12 ? bHour - 12 : bHour;
+    const breakDisplay = `${breakDisplayH}:${bMin.toString().padStart(2, "0")} ${breakAmpm}`;
+
+    // Next slot is 30 mins later (15 match + 15 break)
+    minute += 30;
+    if (minute >= 60) {
+      minute -= 60;
+      hour++;
+    }
+
+    if (bHour < 23 || (bHour === 23 && bMin === 0)) {
+      slots.push({
+        matchTime: matchDisplay,
+        breakEnd: breakDisplay,
+        slotIndex: idx++,
+      });
+    }
+  }
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const getSlotStatus = (matchDisplay: string) => {
+    const parts = matchDisplay.match(/(\d+):(\d+)\s+(AM|PM)/);
+    if (!parts) return "upcoming";
+    let h = Number.parseInt(parts[1]);
+    const m = Number.parseInt(parts[2]);
+    const ap = parts[3];
+    if (ap === "PM" && h !== 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+    const slotStart = h * 60 + m;
+    const slotEnd = slotStart + 15;
+    if (nowMins >= slotStart && nowMins < slotEnd) return "live";
+    if (nowMins >= slotEnd && nowMins < slotEnd + 15) return "break";
+    if (nowMins < slotStart) return "upcoming";
+    return "done";
+  };
+
+  return (
+    <div
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(255,107,0,0.08) 0%, rgba(0,0,0,0.4) 100%)",
+        border: "1px solid rgba(255,107,0,0.3)",
+        borderRadius: 16,
+        padding: "20px 16px",
+        marginBottom: 20,
+      }}
+      data-ocid="schedule.section"
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <span style={{ fontSize: "1.4rem" }}>📅</span>
+        <div>
+          <div
+            style={{
+              fontFamily: "Orbitron, sans-serif",
+              fontWeight: 700,
+              color: "var(--accent)",
+              fontSize: "1rem",
+            }}
+          >
+            DAILY MATCH SCHEDULE
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+            5:00 PM – 11:00 PM • 15 min match + 15 min break
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {slots.map((slot) => {
+          const status = getSlotStatus(slot.matchTime);
+          return (
+            <div
+              key={slot.slotIndex}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background:
+                  status === "live"
+                    ? "rgba(255,107,0,0.18)"
+                    : status === "break"
+                      ? "rgba(255,200,0,0.08)"
+                      : status === "done"
+                        ? "rgba(255,255,255,0.03)"
+                        : "rgba(255,255,255,0.05)",
+                border:
+                  status === "live"
+                    ? "1px solid rgba(255,107,0,0.7)"
+                    : status === "break"
+                      ? "1px solid rgba(255,200,0,0.3)"
+                      : "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 10,
+                padding: "10px 14px",
+                opacity: status === "done" ? 0.5 : 1,
+              }}
+            >
+              <div
+                style={{
+                  minWidth: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background:
+                    status === "live"
+                      ? "var(--accent)"
+                      : status === "done"
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(255,107,0,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "Orbitron, sans-serif",
+                  fontWeight: 700,
+                  fontSize: "0.7rem",
+                  color: status === "live" ? "#fff" : "var(--muted)",
+                  flexShrink: 0,
+                }}
+              >
+                {slot.slotIndex}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{
+                      fontFamily: "Rajdhani, sans-serif",
+                      fontWeight: 700,
+                      color:
+                        status === "live" ? "var(--accent)" : "var(--text)",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    {slot.matchTime}
+                  </span>
+                  {status === "live" && (
+                    <span
+                      style={{
+                        background: "var(--accent)",
+                        color: "#fff",
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        padding: "2px 7px",
+                        borderRadius: 20,
+                        fontFamily: "Orbitron, sans-serif",
+                        animation: "pulse 1.5s infinite",
+                      }}
+                    >
+                      LIVE
+                    </span>
+                  )}
+                  {status === "break" && (
+                    <span
+                      style={{
+                        background: "rgba(255,200,0,0.2)",
+                        color: "#ffd700",
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        padding: "2px 7px",
+                        borderRadius: 20,
+                        fontFamily: "Orbitron, sans-serif",
+                      }}
+                    >
+                      BREAK
+                    </span>
+                  )}
+                  {status === "done" && (
+                    <span
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        color: "var(--muted)",
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        padding: "2px 7px",
+                        borderRadius: 20,
+                        fontFamily: "Rajdhani, sans-serif",
+                      }}
+                    >
+                      DONE
+                    </span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  {status === "break"
+                    ? `⏸ Break until ${slot.breakEnd}`
+                    : `⏱ Match ends • Break until ${slot.breakEnd}`}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    color: "var(--muted)",
+                    fontFamily: "Rajdhani",
+                  }}
+                >
+                  ALL MODES
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: status === "live" ? "var(--accent)" : "var(--muted)",
+                    fontWeight: 700,
+                  }}
+                >
+                  15 MIN
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        style={{
+          marginTop: 12,
+          padding: "8px 12px",
+          background: "rgba(255,107,0,0.06)",
+          borderRadius: 8,
+          fontSize: "0.72rem",
+          color: "var(--muted)",
+          textAlign: "center",
+        }}
+      >
+        ⚠️ All game modes run simultaneously • After every match, 15 min break
+        before next slot
+      </div>
+    </div>
   );
 }
 
@@ -2647,6 +3189,7 @@ function MatchHistoryView({
         <ArrowLeft size={16} /> Back
       </button>
       <h2 className="view-title">⚔️ Match History</h2>
+      <ScheduleSection />
       {loaded && matches.length === 0 ? (
         <div className="empty-state" data-ocid="matches.empty_state">
           <div className="empty-state-icon">🎮</div>
