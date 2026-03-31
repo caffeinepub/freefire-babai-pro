@@ -162,13 +162,14 @@ const GAME_MODES = [
   },
   {
     id: "clash",
-    maxPlayers: 6,
+    maxPlayers: 8,
     label: "Clash Squad",
     emoji: "💥",
-    entryFee: 30,
-    prizePool: 50,
-    desc: "Clash Battle",
+    entryFee: 25,
+    prizePool: 200,
+    desc: "4v4 Squad Battle",
     poster: "/assets/generated/poster-clash.dim_320x180.jpg",
+    isSquadMode: true,
   },
   {
     id: "br-solo",
@@ -2480,6 +2481,7 @@ function MatchJoinModal({
   setIsLoading: (v: boolean) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
 }) {
+  const isClash = mode.id === "clash";
   const [joinedPlayers, setJoinedPlayers] = useState<
     { uid: string; name: string }[]
   >([]);
@@ -2487,6 +2489,29 @@ function MatchJoinModal({
     count: 0,
     max: mode.maxPlayers ?? 2,
   });
+  const [selectedTeam, setSelectedTeam] = useState<"A" | "B" | null>(null);
+  const [teamAPlayers, setTeamAPlayers] = useState<
+    { uid: string; name: string }[]
+  >([]);
+  const [teamBPlayers, setTeamBPlayers] = useState<
+    { uid: string; name: string }[]
+  >([]);
+  const [_adminRoomId, setAdminRoomId] = useState<string | null>(null);
+  const [liveEntryFee, setLiveEntryFee] = useState(mode.entryFee);
+
+  useEffect(() => {
+    // Load live entry fee from Firestore settings for clash squad
+    if (isClash) {
+      getDoc(doc(db, "settings", "clashSquad"))
+        .then((snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.entryPerHead) setLiveEntryFee(data.entryPerHead);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isClash]);
 
   useEffect(() => {
     (async () => {
@@ -2501,107 +2526,205 @@ function MatchJoinModal({
         if (!roomSnap.empty) {
           const roomData = roomSnap.docs[0].data();
           const players: string[] = roomData.players || [];
+          setAdminRoomId(roomSnap.docs[0].id);
           setRoomSlots({
             count: players.length,
             max: (roomData.maxPlayers || mode.maxPlayers) ?? 2,
           });
-          const names = await Promise.all(
-            players.map(async (uid: string) => {
-              try {
-                const uSnap = await getDoc(doc(db, "users", uid));
-                const name = uSnap.exists()
-                  ? uSnap.data().inGameName || uSnap.data().displayName || uid
-                  : uid;
-                return { uid, name };
-              } catch (_) {
-                return { uid, name: uid };
-              }
-            }),
-          );
-          setJoinedPlayers(names);
+          if (isClash) {
+            // Load team A and B separately
+            const teamA: string[] = roomData.teamA || [];
+            const teamB: string[] = roomData.teamB || [];
+            const resolveNames = async (uids: string[]) =>
+              Promise.all(
+                uids.map(async (uid) => {
+                  try {
+                    const uSnap = await getDoc(doc(db, "users", uid));
+                    return {
+                      uid,
+                      name: uSnap.exists()
+                        ? uSnap.data().inGameName ||
+                          uSnap.data().displayName ||
+                          uid
+                        : uid,
+                    };
+                  } catch (_) {
+                    return { uid, name: uid };
+                  }
+                }),
+              );
+            setTeamAPlayers(await resolveNames(teamA));
+            setTeamBPlayers(await resolveNames(teamB));
+            if (roomData.entryFee) setLiveEntryFee(roomData.entryFee);
+          } else {
+            const names = await Promise.all(
+              players.map(async (uid: string) => {
+                try {
+                  const uSnap = await getDoc(doc(db, "users", uid));
+                  const name = uSnap.exists()
+                    ? uSnap.data().inGameName || uSnap.data().displayName || uid
+                    : uid;
+                  return { uid, name };
+                } catch (_) {
+                  return { uid, name: uid };
+                }
+              }),
+            );
+            setJoinedPlayers(names);
+          }
         }
       } catch (_) {
         /* ignore */
       }
     })();
-  }, [mode.id, mode.maxPlayers]);
+  }, [mode.id, mode.maxPlayers, isClash]);
 
   const join = async () => {
-    if (coins < mode.entryFee) {
-      showToast(`Insufficient balance. Need ₹${mode.entryFee}`, "error");
+    const fee = isClash ? liveEntryFee : mode.entryFee;
+    if (coins < fee) {
+      showToast(`Insufficient balance. Need ₹${fee}`, "error");
+      return;
+    }
+    if (isClash && !selectedTeam) {
+      showToast("Please select Team A or Team B first!", "error");
       return;
     }
     setIsLoading(true);
     try {
-      // Try to find an existing waiting room for this mode
-      const roomQ = query(
-        collection(db, "matches"),
-        where("mode", "==", mode.id),
-        where("status", "==", "waiting"),
-        where("player", "==", "admin"),
-      );
-      const roomSnap = await getDocs(roomQ);
-      const maxP = mode.maxPlayers ?? 2;
-
-      if (!roomSnap.empty) {
-        // Join existing admin-created room
-        const roomDoc = roomSnap.docs[0];
-        const roomData = roomDoc.data();
-        const existingPlayers: string[] = roomData.players ?? [];
-        if (existingPlayers.includes(currentUser)) {
-          showToast("Already joined this room", "error");
+      if (isClash) {
+        // Clash Squad team-based join
+        const roomQ = query(
+          collection(db, "matches"),
+          where("mode", "==", "clash"),
+          where("status", "==", "waiting"),
+          where("player", "==", "admin"),
+        );
+        const roomSnap = await getDocs(roomQ);
+        if (roomSnap.empty) {
+          showToast(
+            "No Clash Squad room open right now. Wait for admin to create one.",
+            "error",
+          );
           setIsLoading(false);
           return;
         }
-        const updatedPlayers = [...existingPlayers, currentUser];
-        const isFull = updatedPlayers.length >= maxP;
+        const roomDoc = roomSnap.docs[0];
+        const roomData = roomDoc.data();
+        const teamKey = selectedTeam === "A" ? "teamA" : "teamB";
+        const existingTeam: string[] = roomData[teamKey] || [];
+        if (existingTeam.includes(currentUser)) {
+          showToast("Already joined this team!", "error");
+          setIsLoading(false);
+          return;
+        }
+        if (existingTeam.length >= 4) {
+          showToast(
+            `Team ${selectedTeam} is full! Choose the other team.`,
+            "error",
+          );
+          setIsLoading(false);
+          return;
+        }
+        const updatedTeam = [...existingTeam, currentUser];
+        const allPlayers: string[] = [...(roomData.players || []), currentUser];
+        const isFull = allPlayers.length >= (roomData.maxPlayers || 8);
+        const isFirstInTeam = updatedTeam.length === 1;
         await Promise.all([
           updateDoc(doc(db, "matches", roomDoc.id), {
-            players: updatedPlayers,
+            [teamKey]: updatedTeam,
+            players: allPlayers,
+            ...(isFirstInTeam && selectedTeam === "A"
+              ? { teamALeader: currentUser }
+              : {}),
+            ...(isFirstInTeam && selectedTeam === "B"
+              ? { teamBLeader: currentUser }
+              : {}),
             ...(isFull ? { status: "full" } : {}),
           }),
           addDoc(collection(db, "matches"), {
             player: currentUser,
-            mode: mode.id,
+            mode: "clash",
             status: "waiting",
-            entryFee: mode.entryFee,
-            prizePool: mode.prizePool,
+            entryFee: fee,
+            prizePool: roomData.prizePool || mode.prizePool,
             roomId: roomData.roomId || "",
             roomPass: roomData.roomPass || "",
             timestamp: new Date(),
             roomRef: roomDoc.id,
+            team: selectedTeam,
           }),
-          setDoc(doc(db, "wallet", currentUser), {
-            coins: coins - mode.entryFee,
-          }),
+          setDoc(doc(db, "wallet", currentUser), { coins: coins - fee }),
         ]);
-        if (isFull) {
-          showToast("🔒 Room is now full! Match starting soon.");
-        }
+        if (isFull) showToast("🔒 Room is now full! Match starting soon.");
       } else {
-        // No admin room yet — create own waiting entry
-        await Promise.all([
-          addDoc(collection(db, "matches"), {
-            player: currentUser,
-            mode: mode.id,
-            status: "waiting",
-            entryFee: mode.entryFee,
-            prizePool: mode.prizePool,
-            roomId: "",
-            roomPass: "",
-            timestamp: new Date(),
-          }),
-          setDoc(doc(db, "wallet", currentUser), {
-            coins: coins - mode.entryFee,
-          }),
-        ]);
+        // Non-clash join logic
+        const roomQ = query(
+          collection(db, "matches"),
+          where("mode", "==", mode.id),
+          where("status", "==", "waiting"),
+          where("player", "==", "admin"),
+        );
+        const roomSnap = await getDocs(roomQ);
+        const maxP = mode.maxPlayers ?? 2;
+
+        if (!roomSnap.empty) {
+          const roomDoc = roomSnap.docs[0];
+          const roomData = roomDoc.data();
+          const existingPlayers: string[] = roomData.players ?? [];
+          if (existingPlayers.includes(currentUser)) {
+            showToast("Already joined this room", "error");
+            setIsLoading(false);
+            return;
+          }
+          const updatedPlayers = [...existingPlayers, currentUser];
+          const isFull = updatedPlayers.length >= maxP;
+          await Promise.all([
+            updateDoc(doc(db, "matches", roomDoc.id), {
+              players: updatedPlayers,
+              ...(isFull ? { status: "full" } : {}),
+            }),
+            addDoc(collection(db, "matches"), {
+              player: currentUser,
+              mode: mode.id,
+              status: "waiting",
+              entryFee: mode.entryFee,
+              prizePool: mode.prizePool,
+              roomId: roomData.roomId || "",
+              roomPass: roomData.roomPass || "",
+              timestamp: new Date(),
+              roomRef: roomDoc.id,
+            }),
+            setDoc(doc(db, "wallet", currentUser), {
+              coins: coins - mode.entryFee,
+            }),
+          ]);
+          if (isFull) showToast("🔒 Room is now full! Match starting soon.");
+        } else {
+          await Promise.all([
+            addDoc(collection(db, "matches"), {
+              player: currentUser,
+              mode: mode.id,
+              status: "waiting",
+              entryFee: mode.entryFee,
+              prizePool: mode.prizePool,
+              roomId: "",
+              roomPass: "",
+              timestamp: new Date(),
+            }),
+            setDoc(doc(db, "wallet", currentUser), {
+              coins: coins - mode.entryFee,
+            }),
+          ]);
+        }
       }
       // Save join notification
       try {
+        const fee2 = isClash ? liveEntryFee : mode.entryFee;
+        const teamLabel = isClash ? ` (Team ${selectedTeam})` : "";
         await addDoc(collection(db, "notifications"), {
           uid: currentUser,
           title: "✅ Match Joined!",
-          message: `You joined ${mode.label}. Entry fee ₹${mode.entryFee} deducted. Waiting for Room ID & Password.`,
+          message: `You joined ${mode.label}${teamLabel}. Entry fee ₹${fee2} deducted. Waiting for Room ID & Password.`,
           read: false,
           timestamp: new Date(),
         });
@@ -2651,14 +2774,18 @@ function MatchJoinModal({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: (mode as any).perKill ? "1fr 1fr" : "1fr 1fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: 12,
             marginBottom: 20,
           }}
         >
           <div className="stat-box">
-            <div className="stat-value">₹{mode.entryFee}</div>
-            <div className="stat-label">Entry Fee</div>
+            <div className="stat-value">
+              ₹{isClash ? liveEntryFee : mode.entryFee}
+            </div>
+            <div className="stat-label">
+              {isClash ? "Per Player" : "Entry Fee"}
+            </div>
           </div>
           <div className="stat-box">
             <div className="stat-value" style={{ color: "var(--success)" }}>
@@ -2666,6 +2793,18 @@ function MatchJoinModal({
             </div>
             <div className="stat-label">Prize Pool</div>
           </div>
+          {isClash && (
+            <div className="stat-box" style={{ gridColumn: "span 2" }}>
+              <div
+                className="stat-value"
+                style={{ color: "#ff9a00", fontSize: "0.85rem" }}
+              >
+                4 players/team × ₹{liveEntryFee} = ₹{liveEntryFee * 4} total
+                entry
+              </div>
+              <div className="stat-label">Squad Entry</div>
+            </div>
+          )}
           {(mode as any).perKill && (
             <div className="stat-box">
               <div className="stat-value" style={{ color: "#ff9a00" }}>
@@ -2683,110 +2822,319 @@ function MatchJoinModal({
             </div>
           )}
         </div>
-        {/* Slot occupancy display */}
-        <div
-          style={{
-            marginBottom: 14,
-            background: "rgba(255,107,0,0.08)",
-            border: "1.5px solid rgba(255,107,0,0.3)",
-            borderRadius: 12,
-            padding: "10px 12px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: joinedPlayers.length > 0 ? 8 : 0,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.75rem",
-                color: "#ff9a00",
-                fontFamily: "Orbitron, sans-serif",
-                fontWeight: 700,
-              }}
-            >
-              👥 PLAYERS JOINED
-            </span>
-            <span
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                color:
-                  roomSlots.count >= roomSlots.max
-                    ? "#f87171"
-                    : "var(--success)",
-              }}
-            >
-              {roomSlots.count}/{roomSlots.max}{" "}
-              {roomSlots.count >= roomSlots.max ? "🔒 FULL" : "🟢 OPEN"}
-            </span>
-          </div>
-          {joinedPlayers.length === 0 ? (
+
+        {/* Clash Squad Team Selection */}
+        {isClash && (
+          <div style={{ marginBottom: 16 }}>
             <div
               style={{
-                fontSize: "0.72rem",
-                color: "var(--muted)",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "#ff9a00",
+                fontFamily: "Orbitron, sans-serif",
+                marginBottom: 10,
                 textAlign: "center",
-                paddingTop: 4,
               }}
             >
-              No players yet — be the first!
+              ⚔️ SELECT YOUR TEAM
             </div>
-          ) : (
-            joinedPlayers.map((p, i) => (
-              <div
-                key={p.uid}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              {/* Team A */}
+              <button
+                type="button"
+                onClick={() =>
+                  teamAPlayers.length < 4 ? setSelectedTeam("A") : undefined
+                }
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "5px 8px",
-                  background: "rgba(255,255,255,0.05)",
-                  borderRadius: 8,
-                  marginBottom: 4,
+                  border: `2px solid ${selectedTeam === "A" ? "#22c55e" : "rgba(34,197,94,0.3)"}`,
+                  borderRadius: 12,
+                  padding: "10px 8px",
+                  cursor: teamAPlayers.length < 4 ? "pointer" : "not-allowed",
+                  background:
+                    selectedTeam === "A"
+                      ? "rgba(34,197,94,0.15)"
+                      : "rgba(34,197,94,0.04)",
+                  transition: "all 0.2s",
+                  opacity: teamAPlayers.length >= 4 ? 0.5 : 1,
                 }}
               >
-                <span
+                <div
                   style={{
-                    color: "#f59e0b",
-                    fontWeight: 700,
-                    fontSize: "0.7rem",
-                    minWidth: 22,
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    color: "#22c55e",
+                    marginBottom: 4,
                   }}
                 >
-                  #{i + 1}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      color: "#fff",
-                    }}
-                  >
-                    {p.name}
-                  </div>
-                  <div style={{ fontSize: "0.62rem", color: "var(--muted)" }}>
-                    UID: {p.uid}
-                  </div>
+                  {selectedTeam === "A" ? "✅ " : ""}TEAM A
                 </div>
-                <span
+                <div
                   style={{
                     fontSize: "0.65rem",
-                    color: "#ff6b00",
-                    fontFamily: "Orbitron, sans-serif",
+                    color: "var(--muted)",
+                    marginBottom: 4,
                   }}
                 >
-                  IN ROOM
-                </span>
+                  {teamAPlayers.length}/4 players
+                </div>
+                {teamAPlayers.length === 0 ? (
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      color: "rgba(34,197,94,0.6)",
+                    }}
+                  >
+                    Empty — join first!
+                  </div>
+                ) : (
+                  teamAPlayers.map((p, idx) => (
+                    <div
+                      key={p.uid}
+                      style={{
+                        fontSize: "0.62rem",
+                        color: "#fff",
+                        padding: "1px 0",
+                      }}
+                    >
+                      {idx === 0 ? "👑 " : "• "}
+                      {p.name}
+                    </div>
+                  ))
+                )}
+                {teamAPlayers.length >= 4 && (
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      color: "#f87171",
+                      marginTop: 4,
+                    }}
+                  >
+                    🔒 FULL
+                  </div>
+                )}
+              </button>
+              {/* Team B */}
+              <button
+                type="button"
+                onClick={() =>
+                  teamBPlayers.length < 4 ? setSelectedTeam("B") : undefined
+                }
+                style={{
+                  border: `2px solid ${selectedTeam === "B" ? "#f87171" : "rgba(239,68,68,0.3)"}`,
+                  borderRadius: 12,
+                  padding: "10px 8px",
+                  cursor: teamBPlayers.length < 4 ? "pointer" : "not-allowed",
+                  background:
+                    selectedTeam === "B"
+                      ? "rgba(239,68,68,0.15)"
+                      : "rgba(239,68,68,0.04)",
+                  transition: "all 0.2s",
+                  opacity: teamBPlayers.length >= 4 ? 0.5 : 1,
+                  textAlign: "left",
+                  width: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    color: "#f87171",
+                    marginBottom: 4,
+                  }}
+                >
+                  {selectedTeam === "B" ? "✅ " : ""}TEAM B
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    color: "var(--muted)",
+                    marginBottom: 4,
+                  }}
+                >
+                  {teamBPlayers.length}/4 players
+                </div>
+                {teamBPlayers.length === 0 ? (
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      color: "rgba(239,68,68,0.6)",
+                    }}
+                  >
+                    Empty — join first!
+                  </div>
+                ) : (
+                  teamBPlayers.map((p, idx) => (
+                    <div
+                      key={p.uid}
+                      style={{
+                        fontSize: "0.62rem",
+                        color: "#fff",
+                        padding: "1px 0",
+                      }}
+                    >
+                      {idx === 0 ? "👑 " : "• "}
+                      {p.name}
+                    </div>
+                  ))
+                )}
+                {teamBPlayers.length >= 4 && (
+                  <div
+                    style={{
+                      fontSize: "0.62rem",
+                      color: "#f87171",
+                      marginTop: 4,
+                    }}
+                  >
+                    🔒 FULL
+                  </div>
+                )}
+              </button>
+            </div>
+            {!selectedTeam && (
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#ff9a00",
+                  textAlign: "center",
+                  padding: "6px",
+                  background: "rgba(255,107,0,0.08)",
+                  borderRadius: 8,
+                }}
+              >
+                👆 Tap a team to select it before joining
               </div>
-            ))
-          )}
-        </div>
+            )}
+            {selectedTeam && (
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "#22c55e",
+                  textAlign: "center",
+                  padding: "6px",
+                  background: "rgba(34,197,94,0.08)",
+                  borderRadius: 8,
+                }}
+              >
+                ✅ You selected Team {selectedTeam} — Pay ₹{liveEntryFee} to
+                join
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Non-clash slot occupancy display */}
+        {!isClash && (
+          <div
+            style={{
+              marginBottom: 14,
+              background: "rgba(255,107,0,0.08)",
+              border: "1.5px solid rgba(255,107,0,0.3)",
+              borderRadius: 12,
+              padding: "10px 12px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: joinedPlayers.length > 0 ? 8 : 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#ff9a00",
+                  fontFamily: "Orbitron, sans-serif",
+                  fontWeight: 700,
+                }}
+              >
+                👥 PLAYERS JOINED
+              </span>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  color:
+                    roomSlots.count >= roomSlots.max
+                      ? "#f87171"
+                      : "var(--success)",
+                }}
+              >
+                {roomSlots.count}/{roomSlots.max}{" "}
+                {roomSlots.count >= roomSlots.max ? "🔒 FULL" : "🟢 OPEN"}
+              </span>
+            </div>
+            {joinedPlayers.length === 0 ? (
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--muted)",
+                  textAlign: "center",
+                  paddingTop: 4,
+                }}
+              >
+                No players yet — be the first!
+              </div>
+            ) : (
+              joinedPlayers.map((p, i) => (
+                <div
+                  key={p.uid}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "5px 8px",
+                    background: "rgba(255,255,255,0.05)",
+                    borderRadius: 8,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#f59e0b",
+                      fontWeight: 700,
+                      fontSize: "0.7rem",
+                      minWidth: 22,
+                    }}
+                  >
+                    #{i + 1}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        color: "#fff",
+                      }}
+                    >
+                      {p.name}
+                    </div>
+                    <div style={{ fontSize: "0.62rem", color: "var(--muted)" }}>
+                      UID: {p.uid}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "#ff6b00",
+                      fontFamily: "Orbitron, sans-serif",
+                    }}
+                  >
+                    IN ROOM
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
         <div
           style={{
             fontSize: "0.8rem",
@@ -2797,7 +3145,7 @@ function MatchJoinModal({
         >
           Your balance:{" "}
           <strong style={{ color: "var(--text)" }}>₹{coins}</strong>
-          {coins < mode.entryFee && (
+          {coins < (isClash ? liveEntryFee : mode.entryFee) && (
             <span style={{ color: "var(--danger)" }}> (Insufficient)</span>
           )}
         </div>
@@ -2805,12 +3153,24 @@ function MatchJoinModal({
           type="button"
           className="fire-btn"
           onClick={join}
-          disabled={coins < mode.entryFee || roomSlots.count >= roomSlots.max}
+          disabled={
+            coins < (isClash ? liveEntryFee : mode.entryFee) ||
+            (isClash
+              ? teamAPlayers.length >= 4 && teamBPlayers.length >= 4
+              : roomSlots.count >= roomSlots.max) ||
+            (isClash && !selectedTeam)
+          }
           data-ocid="match.confirm_button"
         >
-          {roomSlots.count >= roomSlots.max
+          {isClash && teamAPlayers.length >= 4 && teamBPlayers.length >= 4
             ? "🔒 Room Full"
-            : `Confirm Join — ₹${mode.entryFee}`}
+            : isClash && !selectedTeam
+              ? "Select a Team First"
+              : !isClash && roomSlots.count >= roomSlots.max
+                ? "🔒 Room Full"
+                : isClash
+                  ? `Join Team ${selectedTeam} — ₹${liveEntryFee}`
+                  : `Confirm Join — ₹${mode.entryFee}`}
         </button>
         <button
           type="button"
@@ -4243,6 +4603,11 @@ interface AdminLogEntry {
 }
 interface AdminMatchData extends MatchData {
   winner?: string;
+  teamA?: string[];
+  teamB?: string[];
+  teamALeader?: string;
+  teamBLeader?: string;
+  squadEntryTotal?: number;
 }
 
 async function logAdminAction(action: string, target = "") {
@@ -4884,6 +5249,8 @@ function AdminMatchesView({
   >({}); // matchId -> {uid: killCount}
   const [_creating, setCreating] = useState(false);
   const [newMode, setNewMode] = useState(GAME_MODES[0].id);
+  const [clashEntryTotal, setClashEntryTotal] = useState(100);
+  const [clashPrizePool, setClashPrizePool] = useState(200);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -4908,20 +5275,37 @@ function AdminMatchesView({
 
   const createMatch = async () => {
     const mode = GAME_MODES.find((m) => m.id === newMode)!;
+    const isClash = mode.id === "clash";
+    const perHeadFee = isClash
+      ? Math.round(clashEntryTotal / 4)
+      : mode.entryFee;
+    const prize = isClash ? clashPrizePool : mode.prizePool;
     setIsLoading(true);
     try {
       await addDoc(collection(db, "matches"), {
         player: "admin",
         mode: mode.id,
         status: "waiting",
-        entryFee: mode.entryFee,
-        prizePool: mode.prizePool,
+        entryFee: perHeadFee,
+        prizePool: prize,
+        squadEntryTotal: isClash ? clashEntryTotal : undefined,
         roomId: "",
         roomPass: "",
         timestamp: new Date(),
         players: [],
         maxPlayers: mode.maxPlayers ?? 2,
+        ...(isClash
+          ? { teamA: [], teamB: [], teamALeader: "", teamBLeader: "" }
+          : {}),
       });
+      // Save clash squad settings to Firestore for users to see
+      if (isClash) {
+        await setDoc(doc(db, "settings", "clashSquad"), {
+          entryPerHead: perHeadFee,
+          prizePool: prize,
+          squadEntryTotal: clashEntryTotal,
+        });
+      }
       await logAdminAction("Created match", mode.id);
       showToast("Match created!");
       setCreating(false);
@@ -5042,7 +5426,6 @@ function AdminMatchesView({
           const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
           const earned = kills * perKill;
           killOps.push(setDoc(doc(db, "wallet", uid), { coins: cur + earned }));
-          // Update user stats
           const uSnap = await getDoc(doc(db, "users", uid));
           if (uSnap.exists()) {
             killOps.push(
@@ -5055,7 +5438,6 @@ function AdminMatchesView({
       }
       await Promise.all(killOps);
 
-      // Award winner bonus + prizePool to winner
       const winnerPrize = winnerBonus > 0 ? winnerBonus : m.prizePool;
       const snap = await getDoc(doc(db, "wallet", winner));
       const cur = snap.exists() ? snap.data().coins || 0 : 0;
@@ -5073,6 +5455,60 @@ function AdminMatchesView({
       ]);
       await logAdminAction(`Awarded prize ₹${winnerPrize}`, winner);
       showToast(`🏆 Prize ₹${winnerPrize} awarded to ${winner}!`);
+      load();
+    } catch (_) {
+      showToast("Error", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectTeamWinner = async (m: AdminMatchData, team: "A" | "B") => {
+    setIsLoading(true);
+    try {
+      const winningTeam = team === "A" ? m.teamA || [] : m.teamB || [];
+      const teamLeader = winningTeam[0];
+      if (!teamLeader) {
+        showToast("No players in winning team", "error");
+        setIsLoading(false);
+        return;
+      }
+      const prize = m.prizePool || 200;
+      const snap = await getDoc(doc(db, "wallet", teamLeader));
+      const cur = snap.exists() ? snap.data().coins || 0 : 0;
+      const leaderSnap = await getDoc(doc(db, "users", teamLeader));
+      await Promise.all([
+        setDoc(doc(db, "wallet", teamLeader), { coins: cur + prize }),
+        updateDoc(doc(db, "matches", m.id), {
+          winner: `Team ${team} (Leader: ${teamLeader})`,
+          status: "completed",
+        }),
+        ...(leaderSnap.exists()
+          ? [
+              updateDoc(doc(db, "users", teamLeader), {
+                wins: (leaderSnap.data().wins || 0) + 1,
+              }),
+            ]
+          : []),
+      ]);
+      // Notify all winning team members
+      const notifOps = winningTeam.map((uid: string) =>
+        addDoc(collection(db, "notifications"), {
+          uid,
+          title: "🏆 You Won!",
+          message: `Your team won Clash Squad! Prize ₹${prize} credited to team leader (${teamLeader}).`,
+          read: false,
+          timestamp: new Date(),
+        }).catch(() => {}),
+      );
+      await Promise.all(notifOps);
+      await logAdminAction(
+        `Team ${team} won Clash Squad, prize ₹${prize} to ${teamLeader}`,
+        m.id,
+      );
+      showToast(
+        `🏆 Team ${team} wins! ₹${prize} awarded to leader ${teamLeader}!`,
+      );
       load();
     } catch (_) {
       showToast("Error", "error");
@@ -5194,10 +5630,97 @@ function AdminMatchesView({
           ))}
         </select>
 
+        {/* Clash Squad dynamic fee inputs */}
+        {newMode === "clash" && (
+          <div style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: "0.78rem",
+                color: "#ff9a00",
+                fontWeight: 700,
+                marginBottom: 6,
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              ⚙️ CLASH SQUAD SETTINGS
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    marginBottom: 3,
+                  }}
+                >
+                  Total Squad Entry (₹)
+                </div>
+                <input
+                  className="fire-input"
+                  type="number"
+                  min="1"
+                  value={clashEntryTotal}
+                  onChange={(e) =>
+                    setClashEntryTotal(Number(e.target.value) || 100)
+                  }
+                  placeholder="e.g. 100"
+                />
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    color: "#ff9a00",
+                    marginTop: 2,
+                  }}
+                >
+                  Per player: ₹{Math.round(clashEntryTotal / 4)}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    marginBottom: 3,
+                  }}
+                >
+                  Prize Pool (₹)
+                </div>
+                <input
+                  className="fire-input"
+                  type="number"
+                  min="1"
+                  value={clashPrizePool}
+                  onChange={(e) =>
+                    setClashPrizePool(Number(e.target.value) || 200)
+                  }
+                  placeholder="e.g. 200"
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                background: "rgba(255,107,0,0.1)",
+                border: "1px solid rgba(255,107,0,0.3)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                fontSize: "0.72rem",
+                color: "#ff9a00",
+              }}
+            >
+              4 players per team × ₹{Math.round(clashEntryTotal / 4)} = ₹
+              {clashEntryTotal} total entry | Prize: ₹{clashPrizePool}
+            </div>
+          </div>
+        )}
         {/* Show selected mode info */}
         {(() => {
           const sel = GAME_MODES.find((m) => m.id === newMode);
           if (!sel) return null;
+          const isClash = newMode === "clash";
+          const dispFee = isClash
+            ? Math.round(clashEntryTotal / 4)
+            : sel.entryFee;
+          const dispPrize = isClash ? clashPrizePool : sel.prizePool;
           return (
             <div
               style={{
@@ -5209,13 +5732,13 @@ function AdminMatchesView({
             >
               {[
                 {
-                  label: "Entry Fee",
-                  val: `₹${sel.entryFee}`,
+                  label: "Entry/Player",
+                  val: `₹${dispFee}`,
                   color: "#f87171",
                 },
                 {
                   label: "Prize Pool",
-                  val: `₹${sel.prizePool}`,
+                  val: `₹${dispPrize}`,
                   color: "#22c55e",
                 },
                 {
@@ -5616,49 +6139,174 @@ function AdminMatchesView({
                     ))}
                   </div>
                 )}
-              {/* Select Winner */}
-              <div style={{ marginTop: 8 }}>
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "var(--muted)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {GAME_MODES.find((gm) => gm.id === m.mode) &&
-                  (GAME_MODES.find((gm) => gm.id === m.mode) as any)
-                    .winnerBonus > 0
-                    ? `Award Winner Bonus (₹${(GAME_MODES.find((gm) => gm.id === m.mode) as any).winnerBonus}) + Kill Coins`
-                    : "Award Prize"}
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    className="fire-input"
-                    placeholder="Winner UID"
-                    value={winnerInput[m.id] || ""}
-                    onChange={(e) =>
-                      setWinnerInput((prev) => ({
-                        ...prev,
-                        [m.id]: e.target.value,
-                      }))
-                    }
-                    data-ocid={`admin.matches.winner.input.${i + 1}`}
-                  />
-                  <button
-                    type="button"
-                    className="fire-btn fire-btn-success"
+              {/* Select Winner - Clash Squad team-based */}
+              {m.mode === "clash" ? (
+                <div style={{ marginTop: 8 }}>
+                  <div
                     style={{
-                      width: "auto",
-                      padding: "6px 12px",
                       fontSize: "0.78rem",
+                      color: "#ff9a00",
+                      fontWeight: 700,
+                      marginBottom: 8,
+                      fontFamily: "Orbitron, sans-serif",
                     }}
-                    onClick={() => selectWinner(m)}
-                    data-ocid={`admin.matches.award.button.${i + 1}`}
                   >
-                    🏆 Award
-                  </button>
+                    🏆 ANNOUNCE WINNER TEAM
+                  </div>
+                  {/* Team A Slots */}
+                  <div
+                    style={{
+                      background: "rgba(34,197,94,0.08)",
+                      border: "1.5px solid rgba(34,197,94,0.4)",
+                      borderRadius: 10,
+                      padding: "8px 10px",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "#22c55e",
+                        fontWeight: 700,
+                        marginBottom: 4,
+                      }}
+                    >
+                      🟢 TEAM A ({(m.teamA || []).length}/4 players)
+                    </div>
+                    {(m.teamA || []).length === 0 ? (
+                      <div
+                        style={{ fontSize: "0.68rem", color: "var(--muted)" }}
+                      >
+                        No players yet
+                      </div>
+                    ) : (
+                      (m.teamA || []).map((uid: string, idx: number) => (
+                        <div
+                          key={uid}
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#fff",
+                            padding: "2px 0",
+                          }}
+                        >
+                          {idx === 0 ? "👑" : "  "} #{idx + 1} {uid}
+                        </div>
+                      ))
+                    )}
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-success"
+                      style={{
+                        width: "100%",
+                        marginTop: 8,
+                        fontSize: "0.78rem",
+                        padding: "6px",
+                      }}
+                      onClick={() => selectTeamWinner(m, "A")}
+                      disabled={(m.teamA || []).length === 0}
+                    >
+                      🏆 Team A Wins — ₹{m.prizePool} to Leader
+                    </button>
+                  </div>
+                  {/* Team B Slots */}
+                  <div
+                    style={{
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1.5px solid rgba(239,68,68,0.4)",
+                      borderRadius: 10,
+                      padding: "8px 10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "#f87171",
+                        fontWeight: 700,
+                        marginBottom: 4,
+                      }}
+                    >
+                      🔴 TEAM B ({(m.teamB || []).length}/4 players)
+                    </div>
+                    {(m.teamB || []).length === 0 ? (
+                      <div
+                        style={{ fontSize: "0.68rem", color: "var(--muted)" }}
+                      >
+                        No players yet
+                      </div>
+                    ) : (
+                      (m.teamB || []).map((uid: string, idx: number) => (
+                        <div
+                          key={uid}
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "#fff",
+                            padding: "2px 0",
+                          }}
+                        >
+                          {idx === 0 ? "👑" : "  "} #{idx + 1} {uid}
+                        </div>
+                      ))
+                    )}
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-danger"
+                      style={{
+                        width: "100%",
+                        marginTop: 8,
+                        fontSize: "0.78rem",
+                        padding: "6px",
+                      }}
+                      onClick={() => selectTeamWinner(m, "B")}
+                      disabled={(m.teamB || []).length === 0}
+                    >
+                      🏆 Team B Wins — ₹{m.prizePool} to Leader
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ marginTop: 8 }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "var(--muted)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {GAME_MODES.find((gm) => gm.id === m.mode) &&
+                    (GAME_MODES.find((gm) => gm.id === m.mode) as any)
+                      .winnerBonus > 0
+                      ? `Award Winner Bonus (₹${(GAME_MODES.find((gm) => gm.id === m.mode) as any).winnerBonus}) + Kill Coins`
+                      : "Award Prize"}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      className="fire-input"
+                      placeholder="Winner UID"
+                      value={winnerInput[m.id] || ""}
+                      onChange={(e) =>
+                        setWinnerInput((prev) => ({
+                          ...prev,
+                          [m.id]: e.target.value,
+                        }))
+                      }
+                      data-ocid={`admin.matches.winner.input.${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-success"
+                      style={{
+                        width: "auto",
+                        padding: "6px 12px",
+                        fontSize: "0.78rem",
+                      }}
+                      onClick={() => selectWinner(m)}
+                      data-ocid={`admin.matches.award.button.${i + 1}`}
+                    >
+                      🏆 Award
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
