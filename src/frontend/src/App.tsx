@@ -159,6 +159,7 @@ const GAME_MODES = [
     prizePool: 360,
     desc: "4-Player War",
     poster: "/assets/generated/poster-squad-4v4.dim_320x180.jpg",
+    isSquadMode: true,
   },
   {
     id: "clash",
@@ -2481,7 +2482,8 @@ function MatchJoinModal({
   setIsLoading: (v: boolean) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
 }) {
-  const isClash = mode.id === "clash";
+  const isTeamMode = mode.id === "clash" || mode.id === "squad";
+  const isClash = isTeamMode;
   const [joinedPlayers, setJoinedPlayers] = useState<
     { uid: string; name: string }[]
   >([]);
@@ -2500,9 +2502,10 @@ function MatchJoinModal({
   const [liveEntryFee, setLiveEntryFee] = useState(mode.entryFee);
 
   useEffect(() => {
-    // Load live entry fee from Firestore settings for clash squad
-    if (isClash) {
-      getDoc(doc(db, "settings", "clashSquad"))
+    // Load live entry fee from Firestore settings for team modes
+    if (isTeamMode) {
+      const settingsKey = mode.id === "squad" ? "squad4v4" : "clashSquad";
+      getDoc(doc(db, "settings", settingsKey))
         .then((snap) => {
           if (snap.exists()) {
             const data = snap.data();
@@ -2511,7 +2514,7 @@ function MatchJoinModal({
         })
         .catch(() => {});
     }
-  }, [isClash]);
+  }, [isTeamMode, mode.id]);
 
   useEffect(() => {
     (async () => {
@@ -2595,14 +2598,14 @@ function MatchJoinModal({
         // Clash Squad team-based join
         const roomQ = query(
           collection(db, "matches"),
-          where("mode", "==", "clash"),
+          where("mode", "==", mode.id),
           where("status", "==", "waiting"),
           where("player", "==", "admin"),
         );
         const roomSnap = await getDocs(roomQ);
         if (roomSnap.empty) {
           showToast(
-            "No Clash Squad room open right now. Wait for admin to create one.",
+            "No room open right now. Wait for admin to create one.",
             "error",
           );
           setIsLoading(false);
@@ -2643,7 +2646,7 @@ function MatchJoinModal({
           }),
           addDoc(collection(db, "matches"), {
             player: currentUser,
-            mode: "clash",
+            mode: mode.id,
             status: "waiting",
             entryFee: fee,
             prizePool: roomData.prizePool || mode.prizePool,
@@ -5251,6 +5254,8 @@ function AdminMatchesView({
   const [newMode, setNewMode] = useState(GAME_MODES[0].id);
   const [clashEntryTotal, setClashEntryTotal] = useState(100);
   const [clashPrizePool, setClashPrizePool] = useState(200);
+  const [squadEntryTotal, setSquadEntryTotal] = useState(400);
+  const [squadPrizePool, setSquadPrizePool] = useState(720);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -5275,11 +5280,20 @@ function AdminMatchesView({
 
   const createMatch = async () => {
     const mode = GAME_MODES.find((m) => m.id === newMode)!;
+    const isTeamMode = mode.id === "clash" || mode.id === "squad";
     const isClash = mode.id === "clash";
-    const perHeadFee = isClash
-      ? Math.round(clashEntryTotal / 4)
-      : mode.entryFee;
-    const prize = isClash ? clashPrizePool : mode.prizePool;
+    const isSquad = mode.id === "squad";
+    const entryTotal = isClash
+      ? clashEntryTotal
+      : isSquad
+        ? squadEntryTotal
+        : 0;
+    const perHeadFee = isTeamMode ? Math.round(entryTotal / 4) : mode.entryFee;
+    const prize = isClash
+      ? clashPrizePool
+      : isSquad
+        ? squadPrizePool
+        : mode.prizePool;
     setIsLoading(true);
     try {
       await addDoc(collection(db, "matches"), {
@@ -5288,22 +5302,23 @@ function AdminMatchesView({
         status: "waiting",
         entryFee: perHeadFee,
         prizePool: prize,
-        squadEntryTotal: isClash ? clashEntryTotal : undefined,
+        squadEntryTotal: isTeamMode ? entryTotal : undefined,
         roomId: "",
         roomPass: "",
         timestamp: new Date(),
         players: [],
         maxPlayers: mode.maxPlayers ?? 2,
-        ...(isClash
+        ...(isTeamMode
           ? { teamA: [], teamB: [], teamALeader: "", teamBLeader: "" }
           : {}),
       });
       // Save clash squad settings to Firestore for users to see
-      if (isClash) {
-        await setDoc(doc(db, "settings", "clashSquad"), {
+      if (isTeamMode) {
+        const settingsKey = isSquad ? "squad4v4" : "clashSquad";
+        await setDoc(doc(db, "settings", settingsKey), {
           entryPerHead: perHeadFee,
           prizePool: prize,
-          squadEntryTotal: clashEntryTotal,
+          squadEntryTotal: entryTotal,
         });
       }
       await logAdminAction("Created match", mode.id);
@@ -5712,15 +5727,108 @@ function AdminMatchesView({
             </div>
           </div>
         )}
+        {/* Squad 4v4 dynamic fee inputs */}
+        {newMode === "squad" && (
+          <div style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                fontSize: "0.78rem",
+                color: "#ff9a00",
+                fontWeight: 700,
+                marginBottom: 6,
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              ⚙️ SQUAD 4v4 SETTINGS
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    marginBottom: 3,
+                  }}
+                >
+                  Total Squad Entry (₹)
+                </div>
+                <input
+                  className="fire-input"
+                  type="number"
+                  min="1"
+                  value={squadEntryTotal}
+                  onChange={(e) =>
+                    setSquadEntryTotal(Number(e.target.value) || 400)
+                  }
+                  placeholder="e.g. 400"
+                />
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    color: "#ff9a00",
+                    marginTop: 2,
+                  }}
+                >
+                  Per player: ₹{Math.round(squadEntryTotal / 4)}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    marginBottom: 3,
+                  }}
+                >
+                  Prize Pool (₹)
+                </div>
+                <input
+                  className="fire-input"
+                  type="number"
+                  min="1"
+                  value={squadPrizePool}
+                  onChange={(e) =>
+                    setSquadPrizePool(Number(e.target.value) || 720)
+                  }
+                  placeholder="e.g. 720"
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                background: "rgba(255,107,0,0.1)",
+                border: "1px solid rgba(255,107,0,0.3)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                fontSize: "0.72rem",
+                color: "#ff9a00",
+              }}
+            >
+              4 players per team × ₹{Math.round(squadEntryTotal / 4)} = ₹
+              {squadEntryTotal} total entry | Prize: ₹{squadPrizePool}
+            </div>
+          </div>
+        )}
         {/* Show selected mode info */}
         {(() => {
           const sel = GAME_MODES.find((m) => m.id === newMode);
           if (!sel) return null;
-          const isClash = newMode === "clash";
-          const dispFee = isClash
-            ? Math.round(clashEntryTotal / 4)
+          const isTeamMode2 = newMode === "clash" || newMode === "squad";
+          const entryTotalDisp =
+            newMode === "clash"
+              ? clashEntryTotal
+              : newMode === "squad"
+                ? squadEntryTotal
+                : 0;
+          const dispFee = isTeamMode2
+            ? Math.round(entryTotalDisp / 4)
             : sel.entryFee;
-          const dispPrize = isClash ? clashPrizePool : sel.prizePool;
+          const dispPrize =
+            newMode === "clash"
+              ? clashPrizePool
+              : newMode === "squad"
+                ? squadPrizePool
+                : sel.prizePool;
           return (
             <div
               style={{
@@ -6140,7 +6248,7 @@ function AdminMatchesView({
                   </div>
                 )}
               {/* Select Winner - Clash Squad team-based */}
-              {m.mode === "clash" ? (
+              {m.mode === "clash" || m.mode === "squad" ? (
                 <div style={{ marginTop: 8 }}>
                   <div
                     style={{
