@@ -65,9 +65,16 @@ type View =
   | "admin-announcements"
   | "admin-complaints"
   | "admin-chat"
-  | "admin-logs";
+  | "admin-logs"
+  | "payment";
 
-type NavTab = "home" | "matches" | "leaderboard" | "notifications" | "profile";
+type NavTab =
+  | "home"
+  | "matches"
+  | "leaderboard"
+  | "notifications"
+  | "profile"
+  | "payment";
 
 interface UserData {
   uid: string;
@@ -450,6 +457,7 @@ export default function App() {
       leaderboard: "leaderboard",
       notifications: "notifications",
       profile: "profile",
+      payment: "payment",
     };
     setView(map[tab]);
     if (tab === "notifications" && currentUser) {
@@ -609,7 +617,6 @@ export default function App() {
             setIsLoading={setIsLoading}
             showToast={showToast}
             setSelectedMode={setSelectedMode}
-            loadWallet={loadWallet}
           />
         )}
         {view === "match-history" && currentUser && (
@@ -654,6 +661,17 @@ export default function App() {
             setView={setView}
             setIsLoading={setIsLoading}
             showToast={showToast}
+          />
+        )}
+        {view === "payment" && currentUser && (
+          <PaymentView
+            key="payment"
+            currentUser={currentUser}
+            coins={coins}
+            setView={setView}
+            setIsLoading={setIsLoading}
+            showToast={showToast}
+            loadWallet={loadWallet}
           />
         )}
         {view === "deposit-history" && currentUser && (
@@ -728,6 +746,11 @@ export default function App() {
                 label: "Alerts",
               },
               {
+                tab: "payment" as NavTab,
+                icon: <Wallet size={20} />,
+                label: "Pay",
+              },
+              {
                 tab: "profile" as NavTab,
                 icon: <User size={20} />,
                 label: "Profile",
@@ -798,6 +821,70 @@ function SplashView() {
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
+function useAuthParticles() {
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.style.cssText =
+      "position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;";
+    canvas.id = "authParticlesCanvas";
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d")!;
+    let raf: number;
+    const particles: {
+      x: number;
+      y: number;
+      r: number;
+      speed: number;
+      opacity: number;
+      color: string;
+    }[] = [];
+    const colors = [
+      "rgba(180,80,0,",
+      "rgba(100,60,0,",
+      "rgba(255,107,0,",
+      "rgba(140,50,0,",
+    ];
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    for (let i = 0; i < 45; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        r: 0.8 + Math.random() * 2.2,
+        speed: 0.3 + Math.random() * 0.7,
+        opacity: 0.08 + Math.random() * 0.25,
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+    }
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of particles) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `${p.color}${p.opacity})`;
+        ctx.fill();
+        p.y -= p.speed;
+        p.x += (Math.random() - 0.5) * 0.3;
+        if (p.y < -10) {
+          p.y = canvas.height + 10;
+          p.x = Math.random() * canvas.width;
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      document.body.removeChild(canvas);
+    };
+  }, []);
+}
+
 function LoginView({
   setView,
   setIsLoading,
@@ -811,6 +898,7 @@ function LoginView({
 }) {
   const [uid, setUid] = useState("");
   const [pass, setPass] = useState("");
+  useAuthParticles();
 
   const login = async () => {
     if (!uid.trim() || !pass.trim()) {
@@ -850,31 +938,62 @@ function LoginView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      <span className="dhurandar-title">DHURANDAR-FF</span>
-      <div className="dhurandar-tagline">
+      <motion.span
+        className="dhurandar-title"
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, type: "spring" }}
+      >
+        DHURANDAR-FF
+      </motion.span>
+      <motion.div
+        className="dhurandar-tagline"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+      >
         ⚔ The #1 Free Fire Tournament Platform ⚔
-      </div>
-      <img
+      </motion.div>
+      <motion.img
         src="/assets/generated/mrsonicff-logo.dim_480x160.png"
         alt="MR.SONIC FF"
         style={{ width: 200, marginBottom: 8 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
       />
-      <div className="auth-form">
-        <button
+      <motion.div
+        className="auth-form"
+        initial={{ opacity: 0, y: 40, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{
+          delay: 0.15,
+          duration: 0.5,
+          type: "spring",
+          stiffness: 120,
+        }}
+      >
+        <motion.button
           type="button"
           className="create-account-cta"
           onClick={() => setView("signup")}
           data-ocid="login.create_account.button"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
         >
           🎮 CREATE ACCOUNT — JOIN THE BATTLE
-        </button>
-        <div
+        </motion.button>
+        <motion.div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
             margin: "4px 0",
           }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35, duration: 0.3 }}
         >
           <div
             style={{ flex: 1, height: 1, background: "rgba(255,107,0,0.2)" }}
@@ -892,8 +1011,13 @@ function LoginView({
           <div
             style={{ flex: 1, height: 1, background: "rgba(255,107,0,0.2)" }}
           />
-        </div>
-        <div className="field-group">
+        </motion.div>
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+        >
           <div className="field-label">Player UID</div>
           <input
             className="fire-input"
@@ -902,8 +1026,13 @@ function LoginView({
             onChange={(e) => setUid(e.target.value)}
             data-ocid="login.input"
           />
-        </div>
-        <div className="field-group">
+        </motion.div>
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        >
           <div className="field-label">Password</div>
           <input
             className="fire-input"
@@ -914,22 +1043,28 @@ function LoginView({
             onKeyDown={(e) => e.key === "Enter" && login()}
             data-ocid="login.input"
           />
-        </div>
-        <button
+        </motion.div>
+        <motion.button
           type="button"
           className="fire-btn"
           onClick={login}
           data-ocid="login.submit_button"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
         >
           Login
-        </button>
-        <div
+        </motion.button>
+        <motion.div
           style={{
             textAlign: "center",
             display: "flex",
             gap: 16,
             justifyContent: "center",
           }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7, duration: 0.4 }}
         >
           <button
             type="button"
@@ -939,8 +1074,8 @@ function LoginView({
           >
             Forgot Password?
           </button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       <Footer />
     </motion.div>
   );
@@ -960,6 +1095,7 @@ function SignupView({
   const [pass, setPass] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  useAuthParticles();
 
   const createUser = async () => {
     if (!uid.trim() || !pass.trim() || !name.trim()) {
@@ -1004,10 +1140,39 @@ function SignupView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      <span className="dhurandar-title">DHURANDAR-FF</span>
-      <div className="dhurandar-tagline">⚔ Create Your Warrior Profile ⚔</div>
-      <div className="auth-form">
-        <div className="field-group">
+      <motion.span
+        className="dhurandar-title"
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, type: "spring" }}
+      >
+        DHURANDAR-FF
+      </motion.span>
+      <motion.div
+        className="dhurandar-tagline"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+      >
+        ⚔ Create Your Warrior Profile ⚔
+      </motion.div>
+      <motion.div
+        className="auth-form"
+        initial={{ opacity: 0, y: 40, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{
+          delay: 0.15,
+          duration: 0.5,
+          type: "spring",
+          stiffness: 120,
+        }}
+      >
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
           <div className="field-label">Player UID *</div>
           <input
             className="fire-input"
@@ -1016,8 +1181,13 @@ function SignupView({
             onChange={(e) => setUid(e.target.value)}
             data-ocid="signup.input"
           />
-        </div>
-        <div className="field-group">
+        </motion.div>
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+        >
           <div className="field-label">Password *</div>
           <input
             className="fire-input"
@@ -1027,8 +1197,13 @@ function SignupView({
             onChange={(e) => setPass(e.target.value)}
             data-ocid="signup.input"
           />
-        </div>
-        <div className="field-group">
+        </motion.div>
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        >
           <div className="field-label">Display Name *</div>
           <input
             className="fire-input"
@@ -1037,8 +1212,13 @@ function SignupView({
             onChange={(e) => setName(e.target.value)}
             data-ocid="signup.input"
           />
-        </div>
-        <div className="field-group">
+        </motion.div>
+        <motion.div
+          className="field-group"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
+        >
           <div className="field-label">Phone Number</div>
           <input
             className="fire-input"
@@ -1047,16 +1227,24 @@ function SignupView({
             onChange={(e) => setPhone(e.target.value)}
             data-ocid="signup.input"
           />
-        </div>
-        <button
+        </motion.div>
+        <motion.button
           type="button"
           className="fire-btn"
           onClick={createUser}
           data-ocid="signup.submit_button"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.4 }}
         >
           ⚡ SIGN UP — JOIN NOW
-        </button>
-        <div style={{ textAlign: "center" }}>
+        </motion.button>
+        <motion.div
+          style={{ textAlign: "center" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.4 }}
+        >
           <button
             type="button"
             className="auth-link"
@@ -1065,8 +1253,8 @@ function SignupView({
           >
             Already have an account? Login
           </button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -1243,6 +1431,419 @@ function BlockedView({ logout }: { logout: () => void }) {
   );
 }
 
+// ─── Payment View ────────────────────────────────────────────────────────────
+function PaymentView({
+  currentUser,
+  coins,
+  setView,
+  setIsLoading,
+  showToast,
+  loadWallet,
+}: {
+  currentUser: string;
+  coins: number;
+  setView: (v: View) => void;
+  setIsLoading: (v: boolean) => void;
+  showToast: (msg: string, type?: "success" | "error") => void;
+  loadWallet: (uid: string) => void;
+}) {
+  const [utr, setUtr] = useState("");
+  const [depositAmt, setDepositAmt] = useState("");
+  const [withdrawAmt, setWithdrawAmt] = useState("");
+
+  const submitUTR = async () => {
+    const dAmt = Number(depositAmt);
+    if (!dAmt || dAmt < 30) {
+      showToast("Minimum deposit amount is ₹30", "error");
+      return;
+    }
+    if (!utr.trim()) {
+      showToast("Enter UTR number", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await addDoc(collection(db, "payments"), {
+        user: currentUser,
+        utr: utr.trim(),
+        amount: dAmt,
+        status: "Pending",
+      });
+      showToast("Payment submitted!");
+      setUtr("");
+      setDepositAmt("");
+    } catch (_) {
+      showToast("Submission failed", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestWithdraw = async () => {
+    const amt = Number(withdrawAmt);
+    if (!amt || amt < 100) {
+      showToast("Minimum withdrawal ₹100", "error");
+      return;
+    }
+    if (amt > coins) {
+      showToast("Insufficient balance", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const charge = Math.floor(amt * 0.09);
+      await Promise.all([
+        addDoc(collection(db, "withdraw"), {
+          user: currentUser,
+          amount: amt,
+          final: amt - charge,
+          status: "Pending",
+        }),
+        setDoc(doc(db, "wallet", currentUser), { coins: coins - amt }),
+      ]);
+      showToast(`Withdrawal requested. You'll receive ₹${amt - charge}`);
+      setWithdrawAmt("");
+      loadWallet(currentUser);
+    } catch (_) {
+      showToast("Withdrawal failed", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      className="view-container"
+      initial={{ opacity: 0, x: 30 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -30 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          style={{ width: "auto", padding: "8px 16px" }}
+          onClick={() => setView("dashboard")}
+          data-ocid="payment.back_button"
+        >
+          ← Back
+        </button>
+        <h2 className="view-title" style={{ margin: 0 }}>
+          💳 Payments
+        </h2>
+      </div>
+
+      {/* Deposit */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="section-label">💸 Deposit Payment</div>
+
+        <div
+          style={{
+            background:
+              "linear-gradient(135deg, #0e1420 0%, #121929 40%, #0d1a3a 100%)",
+            border: "2px solid #ff6b00",
+            borderRadius: 16,
+            padding: "18px 16px",
+            marginBottom: 14,
+            position: "relative" as const,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute" as const,
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              background: "#ff6b00",
+              borderRadius: "16px 16px 0 0",
+            }}
+          />
+
+          <div style={{ textAlign: "center" as const, marginBottom: 12 }}>
+            <span
+              style={{
+                fontSize: "0.7rem",
+                fontFamily: "Orbitron, sans-serif",
+                letterSpacing: 2,
+                color: "#ff6b00",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              💳 Payment Details
+            </span>
+          </div>
+
+          <div
+            style={{
+              background: "rgba(255,107,0,0.12)",
+              border: "1.5px solid rgba(255,107,0,0.6)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: "1.4rem" }}>📲</span>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  color: "#ffb347",
+                  fontFamily: "Rajdhani, sans-serif",
+                  letterSpacing: 1,
+                  marginBottom: 2,
+                }}
+              >
+                UPI ID
+              </div>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  fontFamily: "Orbitron, sans-serif",
+                  color: "#fff",
+                  letterSpacing: 1,
+                }}
+              >
+                8247835354@ibl
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText("8247835354@ibl");
+                showToast("UPI ID copied! 📋", "success");
+              }}
+              style={{
+                background: "rgba(255,107,0,0.2)",
+                border: "1px solid rgba(255,107,0,0.6)",
+                borderRadius: 6,
+                padding: "6px 10px",
+                cursor: "pointer",
+                color: "#ffb347",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+              }}
+            >
+              📋 COPY
+            </button>
+          </div>
+
+          <a
+            href="https://wa.me/917013256124"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "rgba(255,107,0,0.12)",
+              border: "1.5px solid rgba(255,107,0,0.5)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+            }}
+          >
+            <span style={{ fontSize: "1.4rem" }}>💬</span>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.65rem",
+                  color: "#ff6b00",
+                  fontFamily: "Rajdhani, sans-serif",
+                  letterSpacing: 1,
+                  marginBottom: 2,
+                }}
+              >
+                WhatsApp Support
+              </div>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  fontFamily: "Orbitron, sans-serif",
+                  color: "#fff",
+                  letterSpacing: 1,
+                }}
+              >
+                7013256124
+              </div>
+            </div>
+            <span
+              style={{ fontSize: "0.75rem", color: "#ff6b00", fontWeight: 700 }}
+            >
+              TAP →
+            </span>
+          </a>
+
+          <div
+            style={{
+              textAlign: "center" as const,
+              marginTop: 10,
+              fontSize: "0.7rem",
+              color: "rgba(255,255,255,0.5)",
+              fontFamily: "Rajdhani, sans-serif",
+            }}
+          >
+            Pay via UPI → Submit UTR below
+          </div>
+        </div>
+
+        <div className="field-group">
+          <div
+            style={{
+              marginBottom: 6,
+              fontSize: "0.78rem",
+              color: "#ff9500",
+              fontFamily: "Rajdhani, sans-serif",
+              fontWeight: 700,
+              letterSpacing: 0.5,
+            }}
+          >
+            💡 Minimum deposit amount:{" "}
+            <span
+              style={{
+                color: "#fff",
+                background: "rgba(255,149,0,0.18)",
+                borderRadius: 4,
+                padding: "1px 7px",
+                border: "1px solid #ff9500",
+              }}
+            >
+              ₹30
+            </span>
+          </div>
+          <input
+            className="fire-input"
+            type="number"
+            min={30}
+            placeholder="Enter Amount (Min ₹30)"
+            value={depositAmt}
+            onChange={(e) => setDepositAmt(e.target.value)}
+            data-ocid="deposit.amount_input"
+          />
+        </div>
+        <div className="field-group">
+          <input
+            className="fire-input"
+            placeholder="Enter UTR / Transaction ID"
+            value={utr}
+            onChange={(e) => setUtr(e.target.value)}
+            data-ocid="deposit.input"
+          />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            className="fire-btn"
+            onClick={submitUTR}
+            data-ocid="deposit.submit_button"
+          >
+            Submit UTR
+          </button>
+          <button
+            type="button"
+            className="fire-btn fire-btn-secondary"
+            style={{ flex: 0.6 }}
+            onClick={() => setView("deposit-history")}
+            data-ocid="deposit.secondary_button"
+          >
+            History
+          </button>
+        </div>
+      </div>
+
+      {/* Withdraw */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="section-label">💰 Withdraw Coins</div>
+        <div
+          style={{ fontSize: "0.8rem", color: "var(--muted)", marginBottom: 8 }}
+        >
+          9% fee deducted. Min ₹100.
+        </div>
+        <div className="field-group">
+          <input
+            className="fire-input"
+            type="number"
+            placeholder="Amount (min ₹100)"
+            value={withdrawAmt}
+            onChange={(e) => setWithdrawAmt(e.target.value)}
+            data-ocid="withdraw.input"
+          />
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            className="fire-btn"
+            onClick={requestWithdraw}
+            data-ocid="withdraw.submit_button"
+          >
+            Withdraw
+          </button>
+          <button
+            type="button"
+            className="fire-btn fire-btn-secondary"
+            style={{ flex: 0.6 }}
+            onClick={() => setView("withdraw-history")}
+            data-ocid="withdraw.secondary_button"
+          >
+            History
+          </button>
+        </div>
+      </div>
+
+      {/* Support */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setView("chat-support")}
+          data-ocid="support.button"
+        >
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              justifyContent: "center",
+            }}
+          >
+            <MessageSquare size={16} /> Chat Support
+          </span>
+        </button>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setView("report-problem")}
+          data-ocid="report.button"
+        >
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              justifyContent: "center",
+            }}
+          >
+            <Flag size={16} /> Report
+          </span>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 function DashboardView({
   currentUser,
@@ -1252,7 +1853,6 @@ function DashboardView({
   setIsLoading,
   showToast,
   setSelectedMode,
-  loadWallet,
 }: {
   currentUser: string;
   userData: UserData;
@@ -1261,11 +1861,7 @@ function DashboardView({
   setIsLoading: (v: boolean) => void;
   showToast: (msg: string, type?: "success" | "error") => void;
   setSelectedMode: (m: (typeof GAME_MODES)[0] | null) => void;
-  loadWallet: (uid: string) => void;
 }) {
-  const [utr, setUtr] = useState("");
-  const [depositAmt, setDepositAmt] = useState("");
-  const [withdrawAmt, setWithdrawAmt] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
   const [pendingPayments, setPendingPayments] = useState<PaymentData[]>([]);
   const [pendingWithdraws, setPendingWithdraws] = useState<WithdrawData[]>([]);
@@ -1391,66 +1987,6 @@ function DashboardView({
   useEffect(() => {
     if (isAdmin && adminOpen) loadAdmin();
   }, [isAdmin, adminOpen, loadAdmin]);
-
-  const submitUTR = async () => {
-    const dAmt = Number(depositAmt);
-    if (!dAmt || dAmt < 30) {
-      showToast("Minimum deposit amount is ₹30", "error");
-      return;
-    }
-    if (!utr.trim()) {
-      showToast("Enter UTR number", "error");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await addDoc(collection(db, "payments"), {
-        user: currentUser,
-        utr: utr.trim(),
-        amount: dAmt,
-        status: "Pending",
-      });
-      showToast("Payment submitted!");
-      setUtr("");
-      setDepositAmt("");
-    } catch (_) {
-      showToast("Submission failed", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const requestWithdraw = async () => {
-    const amt = Number(withdrawAmt);
-    if (!amt || amt < 100) {
-      showToast("Minimum withdrawal ₹100", "error");
-      return;
-    }
-    if (amt > coins) {
-      showToast("Insufficient balance", "error");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const charge = Math.floor(amt * 0.09);
-      await Promise.all([
-        addDoc(collection(db, "withdraw"), {
-          user: currentUser,
-          amount: amt,
-          final: amt - charge,
-          status: "Pending",
-        }),
-        setDoc(doc(db, "wallet", currentUser), { coins: coins - amt }),
-      ]);
-      showToast(`Withdrawal requested. You'll receive ₹${amt - charge}`);
-      setWithdrawAmt("");
-      loadWallet(currentUser);
-    } catch (_) {
-      showToast("Withdrawal failed", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const approvePayment = async (id: string, user: string, amount: number) => {
     setIsLoading(true);
@@ -2054,317 +2590,16 @@ function DashboardView({
         ))}
       </div>
 
-      {/* Payment */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="section-label">💸 Deposit Payment</div>
-
-        {/* UPI & WhatsApp Payment Info Box */}
-        <div
-          style={{
-            background:
-              "linear-gradient(135deg, #0e1420 0%, #121929 40%, #0d1a3a 100%)",
-            border: "2px solid #ff6b00",
-            borderRadius: 16,
-            padding: "18px 16px",
-            marginBottom: 14,
-            boxShadow:
-              "0 0 24px rgba(255,107,0,0.35), 0 0 8px rgba(255,107,0,0.2)",
-            position: "relative" as const,
-            overflow: "hidden",
-          }}
-        >
-          {/* Glow top accent */}
-          <div
-            style={{
-              position: "absolute" as const,
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 3,
-              background: "linear-gradient(90deg, #ff6b00, #ff6b00, #ff6b00)",
-              borderRadius: "16px 16px 0 0",
-            }}
-          />
-
-          <div style={{ textAlign: "center" as const, marginBottom: 12 }}>
-            <span
-              style={{
-                fontSize: "0.7rem",
-                fontFamily: "Orbitron, sans-serif",
-                letterSpacing: 2,
-                color: "#ff6b00",
-                textTransform: "uppercase" as const,
-                opacity: 0.9,
-              }}
-            >
-              💳 Payment Details
-            </span>
-          </div>
-
-          {/* UPI Box */}
-          <div
-            style={{
-              background: "rgba(255,107,0,0.12)",
-              border: "1.5px solid rgba(255,107,0,0.6)",
-              borderRadius: 10,
-              padding: "10px 14px",
-              marginBottom: 10,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <span style={{ fontSize: "1.4rem" }}>📲</span>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: "0.65rem",
-                  color: "#ffb347",
-                  fontFamily: "Rajdhani, sans-serif",
-                  letterSpacing: 1,
-                  marginBottom: 2,
-                }}
-              >
-                UPI ID
-              </div>
-              <div
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  fontFamily: "Orbitron, sans-serif",
-                  color: "#fff",
-                  letterSpacing: 1,
-                  textShadow: "0 0 10px rgba(255,107,0,0.8)",
-                }}
-              >
-                8247835354@ibl
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText("8247835354@ibl");
-                showToast("UPI ID copied! 📋", "success");
-              }}
-              style={{
-                background: "rgba(255,107,0,0.2)",
-                border: "1px solid rgba(255,107,0,0.6)",
-                borderRadius: 6,
-                padding: "6px 10px",
-                cursor: "pointer",
-                color: "#ffb347",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                letterSpacing: 0.5,
-              }}
-            >
-              📋 COPY
-            </button>
-          </div>
-
-          {/* WhatsApp Box */}
-          <a
-            href="https://wa.me/917013256124"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: "rgba(255,107,0,0.12)",
-              border: "1.5px solid rgba(255,107,0,0.5)",
-              borderRadius: 10,
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              textDecoration: "none",
-              cursor: "pointer",
-            }}
-          >
-            <span style={{ fontSize: "1.4rem" }}>💬</span>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: "0.65rem",
-                  color: "#ff6b00",
-                  fontFamily: "Rajdhani, sans-serif",
-                  letterSpacing: 1,
-                  marginBottom: 2,
-                }}
-              >
-                WhatsApp Support
-              </div>
-              <div
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  fontFamily: "Orbitron, sans-serif",
-                  color: "#fff",
-                  letterSpacing: 1,
-                  textShadow: "0 0 10px rgba(255,107,0,0.7)",
-                }}
-              >
-                7013256124
-              </div>
-            </div>
-            <span
-              style={{ fontSize: "0.75rem", color: "#ff6b00", fontWeight: 700 }}
-            >
-              TAP →
-            </span>
-          </a>
-
-          <div
-            style={{
-              textAlign: "center" as const,
-              marginTop: 10,
-              fontSize: "0.7rem",
-              color: "rgba(255,255,255,0.5)",
-              fontFamily: "Rajdhani, sans-serif",
-            }}
-          >
-            Pay via UPI → Submit UTR below
-          </div>
-        </div>
-
-        <div className="field-group">
-          <div
-            style={{
-              marginBottom: 6,
-              fontSize: "0.78rem",
-              color: "#ff9500",
-              fontFamily: "Rajdhani, sans-serif",
-              fontWeight: 700,
-              letterSpacing: 0.5,
-            }}
-          >
-            💡 Minimum deposit amount:{" "}
-            <span
-              style={{
-                color: "#fff",
-                background: "rgba(255,149,0,0.18)",
-                borderRadius: 4,
-                padding: "1px 7px",
-                border: "1px solid #ff9500",
-              }}
-            >
-              ₹30
-            </span>
-          </div>
-          <input
-            className="fire-input"
-            type="number"
-            min={30}
-            placeholder="Enter Amount (Min ₹30)"
-            value={depositAmt}
-            onChange={(e) => setDepositAmt(e.target.value)}
-            data-ocid="deposit.amount_input"
-          />
-        </div>
-        <div className="field-group">
-          <input
-            className="fire-input"
-            placeholder="Enter UTR / Transaction ID"
-            value={utr}
-            onChange={(e) => setUtr(e.target.value)}
-            data-ocid="deposit.input"
-          />
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            className="fire-btn"
-            onClick={submitUTR}
-            data-ocid="deposit.submit_button"
-          >
-            Submit UTR
-          </button>
-          <button
-            type="button"
-            className="fire-btn fire-btn-secondary"
-            style={{ flex: 0.6 }}
-            onClick={() => setView("deposit-history")}
-            data-ocid="deposit.secondary_button"
-          >
-            History
-          </button>
-        </div>
-      </div>
-
-      {/* Withdraw */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="section-label">💰 Withdraw Coins</div>
-        <div
-          style={{ fontSize: "0.8rem", color: "var(--muted)", marginBottom: 8 }}
-        >
-          9% fee deducted. Min ₹100.
-        </div>
-        <div className="field-group">
-          <input
-            className="fire-input"
-            type="number"
-            placeholder="Amount (min ₹100)"
-            value={withdrawAmt}
-            onChange={(e) => setWithdrawAmt(e.target.value)}
-            data-ocid="withdraw.input"
-          />
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            className="fire-btn"
-            onClick={requestWithdraw}
-            data-ocid="withdraw.submit_button"
-          >
-            Withdraw
-          </button>
-          <button
-            type="button"
-            className="fire-btn fire-btn-secondary"
-            style={{ flex: 0.6 }}
-            onClick={() => setView("withdraw-history")}
-            data-ocid="withdraw.secondary_button"
-          >
-            History
-          </button>
-        </div>
-      </div>
-
-      {/* More links */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <button
-          type="button"
-          className="fire-btn fire-btn-secondary"
-          onClick={() => setView("chat-support")}
-          data-ocid="support.button"
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              justifyContent: "center",
-            }}
-          >
-            <MessageSquare size={16} /> Chat Support
-          </span>
-        </button>
-        <button
-          type="button"
-          className="fire-btn fire-btn-secondary"
-          onClick={() => setView("report-problem")}
-          data-ocid="report.button"
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              justifyContent: "center",
-            }}
-          >
-            <Flag size={16} /> Report
-          </span>
-        </button>
-      </div>
+      {/* Payment & Withdraw */}
+      <button
+        type="button"
+        className="fire-btn"
+        style={{ marginBottom: 12 }}
+        onClick={() => setView("payment")}
+        data-ocid="wallet.payment_button"
+      >
+        💳 Deposit & Withdraw
+      </button>
 
       {/* Admin Panel */}
       {isAdmin && (
@@ -4624,7 +4859,8 @@ type AdminView =
   | "admin-announcements"
   | "admin-complaints"
   | "admin-chat"
-  | "admin-logs";
+  | "admin-logs"
+  | "payment";
 
 interface AdminLogEntry {
   id: string;
