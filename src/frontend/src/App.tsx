@@ -1435,8 +1435,9 @@ function DashboardView({
       ]);
       showToast("Payment approved!");
       loadAdmin();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -4991,8 +4992,9 @@ function AdminUsersView({
       await logAdminAction(`Added ₹${amount} coins`, uid);
       showToast(`Added ₹${amount} to ${uid}`);
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5009,8 +5011,9 @@ function AdminUsersView({
       await logAdminAction(`Removed ₹${amount} coins`, uid);
       showToast(`Removed ₹${amount} from ${uid}`);
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5026,8 +5029,9 @@ function AdminUsersView({
       );
       showToast(u.blocked ? "User unblocked" : "User blocked");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5044,8 +5048,9 @@ function AdminUsersView({
       await logAdminAction("Deleted user account", uid);
       showToast("User deleted");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5325,8 +5330,9 @@ function AdminMatchesView({
       showToast("Match created!");
       setCreating(false);
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5381,8 +5387,9 @@ function AdminMatchesView({
       await logAdminAction("Assigned room", id);
       showToast("Room assigned! Players notified.");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5398,8 +5405,9 @@ function AdminMatchesView({
       await logAdminAction("Started match", id);
       showToast("Match started!");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5412,8 +5420,9 @@ function AdminMatchesView({
       await logAdminAction("Ended match", id);
       showToast("Match ended!");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5471,8 +5480,9 @@ function AdminMatchesView({
       await logAdminAction(`Awarded prize ₹${winnerPrize}`, winner);
       showToast(`🏆 Prize ₹${winnerPrize} awarded to ${winner}!`);
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5525,8 +5535,9 @@ function AdminMatchesView({
         `🏆 Team ${team} wins! ₹${prize} awarded to leader ${teamLeader}!`,
       );
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -5561,8 +5572,9 @@ function AdminMatchesView({
         `Match cancelled. ₹${refundAmount} refunded to ${player ?? "player"}.`,
       );
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -6472,8 +6484,9 @@ function AdminPaymentsView({
       await logAdminAction(`Approved payment ₹${p.amount}`, p.user);
       showToast("Payment approved!");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -6486,8 +6499,9 @@ function AdminPaymentsView({
       await logAdminAction("Rejected payment", user);
       showToast("Payment rejected");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -6635,8 +6649,9 @@ function AdminWithdrawalsView({
       await logAdminAction("Approved withdrawal", user);
       showToast("Withdrawal approved!");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -6649,8 +6664,9 @@ function AdminWithdrawalsView({
       await logAdminAction("Rejected withdrawal", user);
       showToast("Withdrawal rejected");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -7100,8 +7116,9 @@ function AdminChatView({
       showToast("Reply sent!");
       setReply("");
       load();
-    } catch (_) {
-      showToast("Error", "error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
     }
