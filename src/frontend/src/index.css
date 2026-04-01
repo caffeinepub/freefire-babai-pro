@@ -1171,6 +1171,129 @@
   }
 
   /* Auth pages */
+
+  /* DHURANDAR-FF 3D Title Animation */
+  @keyframes dhurandar3d {
+    0% {
+      transform: perspective(400px) rotateY(0deg) rotateX(0deg);
+      text-shadow: 0 0 20px rgba(255, 107, 0, 0.8), 4px 4px 0
+        rgba(255, 60, 0, 0.5);
+    }
+    20% {
+      transform: perspective(400px) rotateY(15deg) rotateX(5deg);
+      text-shadow: -6px 4px 0 rgba(255, 60, 0, 0.6), 0 0 30px
+        rgba(255, 107, 0, 1);
+    }
+    40% {
+      transform: perspective(400px) rotateY(-10deg) rotateX(-3deg) scaleX(1.08);
+      text-shadow: 6px 4px 0 rgba(255, 140, 0, 0.6), 0 0 25px
+        rgba(255, 107, 0, 0.9);
+    }
+    60% {
+      transform: perspective(400px) rotateY(8deg) rotateX(4deg);
+      text-shadow: -4px 4px 0 rgba(255, 60, 0, 0.5), 0 0 35px
+        rgba(255, 107, 0, 1);
+    }
+    80% {
+      transform: perspective(400px) rotateY(-5deg) rotateX(-2deg);
+      text-shadow: 4px 4px 0 rgba(255, 140, 0, 0.5), 0 0 20px
+        rgba(255, 107, 0, 0.8);
+    }
+    100% {
+      transform: perspective(400px) rotateY(0deg) rotateX(0deg);
+      text-shadow: 0 0 20px rgba(255, 107, 0, 0.8), 4px 4px 0
+        rgba(255, 60, 0, 0.5);
+    }
+  }
+
+  @keyframes dhurandarGlow {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 10px rgba(255, 107, 0, 0.7))
+        drop-shadow(0 0 20px rgba(255, 60, 0, 0.4));
+    }
+    50% {
+      filter: drop-shadow(0 0 22px rgba(255, 140, 0, 1))
+        drop-shadow(0 0 40px rgba(255, 60, 0, 0.7));
+    }
+  }
+
+  @keyframes dhurandarSlide {
+    0% {
+      opacity: 0;
+      transform: perspective(400px) rotateY(-40deg) translateY(-20px);
+    }
+    100% {
+      opacity: 1;
+      transform: perspective(400px) rotateY(0deg) translateY(0);
+    }
+  }
+
+  .dhurandar-title {
+    font-family: "Orbitron", sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    background: linear-gradient(
+      135deg,
+      #ff6b00 0%,
+      #ffcc00 40%,
+      #ff3c00 70%,
+      #ff6b00 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: dhurandar3d 4s ease-in-out infinite, dhurandarGlow 2s ease-in-out
+      infinite, dhurandarSlide 0.6s ease-out both;
+    transform-style: preserve-3d;
+    display: block;
+    text-align: center;
+    margin-bottom: 6px;
+    user-select: none;
+  }
+
+  .dhurandar-tagline {
+    font-family: "Rajdhani", sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    color: rgba(255, 140, 0, 0.7);
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .create-account-cta {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 0, 0.12) 0%,
+      rgba(255, 60, 0, 0.06) 100%
+    );
+    border: 2px dashed rgba(255, 107, 0, 0.4);
+    color: #ff6b00;
+    font-family: "Orbitron", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+  }
+
+  .create-account-cta:hover {
+    border-color: #ff6b00;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 0, 0.2) 0%,
+      rgba(255, 60, 0, 0.1) 100%
+    );
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+    transform: translateY(-2px);
+  }
+
   .auth-page {
     min-height: 100vh;
     display: flex;

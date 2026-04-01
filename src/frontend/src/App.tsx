@@ -850,13 +850,49 @@ function LoginView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
+      <span className="dhurandar-title">DHURANDAR-FF</span>
+      <div className="dhurandar-tagline">
+        ⚔ The #1 Free Fire Tournament Platform ⚔
+      </div>
       <img
         src="/assets/generated/mrsonicff-logo.dim_480x160.png"
         alt="MR.SONIC FF"
-        style={{ width: 220, marginBottom: 4 }}
+        style={{ width: 200, marginBottom: 8 }}
       />
-      <div className="auth-subtitle">The #1 Free Fire Tournament Platform</div>
       <div className="auth-form">
+        <button
+          type="button"
+          className="create-account-cta"
+          onClick={() => setView("signup")}
+          data-ocid="login.create_account.button"
+        >
+          🎮 CREATE ACCOUNT — JOIN THE BATTLE
+        </button>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            margin: "4px 0",
+          }}
+        >
+          <div
+            style={{ flex: 1, height: 1, background: "rgba(255,107,0,0.2)" }}
+          />
+          <span
+            style={{
+              color: "var(--muted)",
+              fontSize: "0.75rem",
+              fontFamily: "Rajdhani, sans-serif",
+              letterSpacing: "0.1em",
+            }}
+          >
+            OR LOGIN
+          </span>
+          <div
+            style={{ flex: 1, height: 1, background: "rgba(255,107,0,0.2)" }}
+          />
+        </div>
         <div className="field-group">
           <div className="field-label">Player UID</div>
           <input
@@ -898,18 +934,10 @@ function LoginView({
           <button
             type="button"
             className="auth-link"
-            onClick={() => setView("signup")}
-            data-ocid="login.signup.link"
-          >
-            Create Account
-          </button>
-          <button
-            type="button"
-            className="auth-link"
             onClick={() => setView("forgot-password")}
             data-ocid="login.forgot.link"
           >
-            Forgot Password
+            Forgot Password?
           </button>
         </div>
       </div>
@@ -976,8 +1004,8 @@ function SignupView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      <div className="auth-logo">🔥 JOIN THE BATTLE</div>
-      <div className="auth-subtitle">Create your warrior profile</div>
+      <span className="dhurandar-title">DHURANDAR-FF</span>
+      <div className="dhurandar-tagline">⚔ Create Your Warrior Profile ⚔</div>
       <div className="auth-form">
         <div className="field-group">
           <div className="field-label">Player UID *</div>
@@ -1026,7 +1054,7 @@ function SignupView({
           onClick={createUser}
           data-ocid="signup.submit_button"
         >
-          Create Account
+          ⚡ SIGN UP — JOIN NOW
         </button>
         <div style={{ textAlign: "center" }}>
           <button
@@ -5307,7 +5335,7 @@ function AdminMatchesView({
         status: "waiting",
         entryFee: perHeadFee,
         prizePool: prize,
-        squadEntryTotal: isTeamMode ? entryTotal : undefined,
+        ...(isTeamMode ? { squadEntryTotal: entryTotal } : {}),
         roomId: "",
         roomPass: "",
         timestamp: new Date(),
