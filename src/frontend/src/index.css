@@ -1260,11 +1260,11 @@
     border-radius: 14px;
     background: linear-gradient(
       135deg,
-      rgba(255, 107, 0, 0.12) 0%,
-      rgba(255, 60, 0, 0.06) 100%
+      rgba(0, 200, 100, 0.15) 0%,
+      rgba(0, 160, 80, 0.08) 100%
     );
-    border: 2px dashed rgba(255, 107, 0, 0.4);
-    color: #ff6b00;
+    border: 2px solid rgba(0, 200, 100, 0.5);
+    color: #00c864;
     font-family: "Orbitron", sans-serif;
     font-size: 0.95rem;
     font-weight: 700;
@@ -1272,15 +1272,18 @@
     cursor: pointer;
     transition: all 0.25s ease;
     text-align: center;
+    box-shadow: 0 0 16px rgba(0, 200, 100, 0.15);
   }
 
   .create-account-cta:hover {
-    border-color: #ff6b00;
+    border-color: #00e676;
     background: linear-gradient(
       135deg,
-      rgba(255, 107, 0, 0.2) 0%,
-      rgba(255, 60, 0, 0.1) 100%
+      rgba(0, 200, 100, 0.25) 0%,
+      rgba(0, 160, 80, 0.15) 100%
     );
+    color: #00e676;
+    box-shadow: 0 0 28px rgba(0, 200, 100, 0.3);
     transform: translateY(-2px);
   }
 
