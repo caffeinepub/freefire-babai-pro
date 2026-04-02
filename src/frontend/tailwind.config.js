@@ -5,45 +5,42 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Orbitron", "sans-serif"],
-        body: ["Rajdhani", "sans-serif"],
+        display: ["'Bricolage Grotesque'", "system-ui", "sans-serif"],
+        body:    ["'Figtree'", "system-ui", "sans-serif"],
       },
       colors: {
-        fire: {
-          50:  "oklch(0.97 0.05 50)",
-          100: "oklch(0.92 0.10 46)",
-          200: "oklch(0.84 0.16 44)",
-          300: "oklch(0.76 0.21 42)",
-          400: "oklch(0.68 0.23 38)",
-          500: "oklch(0.60 0.24 32)",
-          600: "oklch(0.52 0.22 27)",
-          700: "oklch(0.44 0.19 24)",
-        },
         background: "oklch(var(--background))",
         foreground: "oklch(var(--foreground))",
         card: {
-          DEFAULT: "oklch(var(--card))",
+          DEFAULT:    "oklch(var(--card))",
           foreground: "oklch(var(--card-foreground))",
         },
         primary: {
-          DEFAULT: "oklch(var(--primary))",
+          DEFAULT:    "oklch(var(--primary))",
           foreground: "oklch(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "oklch(var(--secondary))",
+          DEFAULT:    "oklch(var(--secondary))",
           foreground: "oklch(var(--secondary-foreground))",
         },
         muted: {
-          DEFAULT: "oklch(var(--muted))",
+          DEFAULT:    "oklch(var(--muted))",
           foreground: "oklch(var(--muted-foreground))",
         },
-        border: "oklch(var(--border))",
-        input: "oklch(var(--input))",
-        ring: "oklch(var(--ring))",
+        accent: {
+          DEFAULT:    "oklch(var(--accent))",
+          foreground: "oklch(var(--accent-foreground))",
+        },
         destructive: {
-          DEFAULT: "oklch(var(--destructive))",
+          DEFAULT:    "oklch(var(--destructive))",
           foreground: "oklch(var(--destructive-foreground))",
         },
+        border: "oklch(var(--border))",
+        input:  "oklch(var(--input))",
+        ring:   "oklch(var(--ring))",
+        safe:    "oklch(0.75 0.22 150)",
+        warn:    "oklch(0.78 0.18 75)",
+        danger:  "oklch(0.60 0.25 25)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -51,8 +48,24 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        fire: "0 0 20px rgba(255,60,0,0.3)",
-        "fire-lg": "0 0 40px rgba(255,60,0,0.5)",
+        safe:   "0 0 24px oklch(0.75 0.22 150 / 0.5)",
+        warn:   "0 0 24px oklch(0.78 0.18 75 / 0.5)",
+        danger: "0 0 24px oklch(0.60 0.25 25 / 0.5)",
+        card:   "0 2px 24px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.04)",
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up":   "accordion-up 0.2s ease-out",
       },
     },
   },
