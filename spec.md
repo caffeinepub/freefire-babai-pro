@@ -1,41 +1,45 @@
-# Aviator Demo Game
+# COLOUR TRADE — Colour Prediction Game
 
 ## Current State
-Basic React app with a simple Aviator Demo game converted from HTML. The current App.tsx has a very basic implementation with minimal styling.
+This is a new standalone project. No existing application files. The workspace previously contained an Aviator Demo Game / MR.SONIC FF project.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Fully professional, premium casino/gaming visual design
-- Animated plane/rocket SVG that flies across the screen during gameplay
-- Glowing multiplier display with color changes (green → yellow → red as it rises)
-- Animated crash explosion effect
-- Bet amount input field (purely visual, no real money)
-- History of last 10 rounds showing crash points (color-coded)
-- Real-time animated graph/curve showing multiplier growth
-- Professional dark gaming theme with deep blues/purples and neon accents
-- Smooth CSS animations for all transitions
-- Responsive mobile-first design
-- Sound-like visual feedback (screen shake on crash)
+- Brand new Colour Trading / Prediction game (WinGo-style)
+- Game rounds with countdown timer (e.g., 60 seconds per round)
+- Three colour choices: RED (x2), VIOLET (x4.5), GREEN (x2)
+- Bet amount chips: ₹10, ₹50, ₹100, ₹200, ₹500, custom input
+- Place Bet button locked during result phase
+- Auto round result after countdown ends — random outcome (Red/Green/Violet)
+- Win/Loss logic: correct prediction pays multiplier × bet amount
+- Demo wallet with starting ₹1000 balance
+- Live betting history table: Round #, Color result, Bet Amount, Win/Loss
+- Top Winners leaderboard with fake live data
+- Live fake bets table (other players' bets sliding in)
+- User profile card with wallet balance
+- Result announcement animation (colour reveal)
+- Round number tracker
+- Responsive premium dark casino-style UI
+- Sounds: win chime, loss buzz, tick countdown, result reveal
+- Mute toggle
 
 ### Modify
-- Complete visual redesign of the game interface
-- Multiplier display: much larger, animated, color-coded
-- Buttons: professional styled Start/Cash Out with disabled states
-- Background: dark deep space gaming aesthetic with particle-like dots
+- N/A (new project)
 
 ### Remove
-- Plain white buttons and basic styling
-- No-frills layout
+- N/A (new project)
 
 ## Implementation Plan
-1. Redesign App.tsx with full professional gaming UI
-2. Add animated SVG plane that moves across the screen
-3. Add multiplier history panel showing last 10 rounds
-4. Add animated background with canvas particles or CSS gradient
-5. Add glowing neon effects for multiplier display
-6. Color-coded multiplier (green < 2x, yellow 2-4x, red > 4x)
-7. Screen shake animation on crash
-8. Bet input field (visual only)
-9. Update index.css with dark gaming theme tokens
-10. Validate and build
+1. Build single-page HTML/CSS/JS app (pure frontend, no backend/Firebase needed for demo)
+2. Game loop: 60s countdown → result → 5s result display → new round
+3. Colour choice buttons: RED, VIOLET, GREEN with multipliers displayed
+4. Bet chip selector + custom input + Place Bet button
+5. Wallet deducted on bet, credited on win
+6. History table updated each round
+7. Fake live bets generated every few seconds for social proof
+8. Top winners panel with fake rotating data
+9. Full premium dark UI matching design preview: deep navy bg, neon purple/pink/gold accents, glassmorphism cards
+10. Animated result reveal (colour flash + win/loss toast)
+11. Sound effects via Web Audio API
+12. Mute toggle in header
