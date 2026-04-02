@@ -1277,8 +1277,6 @@ function SignupView({
         }),
         setDoc(doc(db, "wallet", uid.trim()), {
           coins: 10,
-          bonusCoins: 30,
-          firstWithdrawUsed: false,
         }),
       ]);
       showToast("Account created! You can login now.");
@@ -1611,61 +1609,6 @@ function PaymentView({
   const [utr, setUtr] = useState("");
   const [depositAmt, setDepositAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
-  const [firstWithdrawUsed, setFirstWithdrawUsed] = useState(false);
-  const [loadingFirstWithdraw, setLoadingFirstWithdraw] = useState(false);
-
-  useEffect(() => {
-    const loadFirstWithdrawStatus = async () => {
-      if (!currentUser) return;
-      const snap = await getDoc(doc(db, "wallet", currentUser));
-      if (snap.exists()) {
-        setFirstWithdrawUsed(!!snap.data()?.firstWithdrawUsed);
-      }
-    };
-    loadFirstWithdrawStatus();
-  }, [currentUser]);
-
-  const claimFirstWithdraw = async () => {
-    setLoadingFirstWithdraw(true);
-    try {
-      const walletRef = doc(db, "wallet", currentUser);
-      const snap = await getDoc(walletRef);
-      if (!snap.exists() || snap.data()?.firstWithdrawUsed) {
-        showToast("First withdrawal already used", "error");
-        return;
-      }
-      const walletData = snap.data();
-      const bonusCoins = walletData?.bonusCoins || 0;
-      if (bonusCoins < 30) {
-        showToast("No bonus balance to withdraw", "error");
-        return;
-      }
-      await Promise.all([
-        addDoc(collection(db, "withdraw"), {
-          user: currentUser,
-          amount: 30,
-          final: 30,
-          type: "first_bonus",
-          status: "Pending",
-        }),
-        updateDoc(walletRef, {
-          coins: (walletData?.coins || 0) - 30,
-          firstWithdrawUsed: true,
-        }),
-      ]);
-      setFirstWithdrawUsed(true);
-      loadWallet(currentUser);
-      showToast("🎉 ₹30 First Bonus Withdrawal requested!");
-      sendAdminNotification(
-        "💸 MR.SONIC FF",
-        `"${currentUser}" claimed ₹30 first bonus withdrawal.`,
-      );
-    } catch (_) {
-      showToast("Error processing withdrawal", "error");
-    } finally {
-      setLoadingFirstWithdraw(false);
-    }
-  };
 
   const submitUTR = async () => {
     const dAmt = Number(depositAmt);
@@ -2022,72 +1965,6 @@ function PaymentView({
           </button>
         </div>
       </div>
-
-      {/* First Bonus Withdrawal */}
-      {!firstWithdrawUsed && (
-        <div
-          style={{
-            background: "linear-gradient(135deg,#1a2a0a,#0f1a05)",
-            border: "2px solid #00c864",
-            borderRadius: 14,
-            padding: "18px 16px",
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              color: "#00c864",
-              fontFamily: "Orbitron,sans-serif",
-              fontWeight: 800,
-              fontSize: "1rem",
-              marginBottom: 6,
-            }}
-          >
-            🎁 FIRST BONUS WITHDRAWAL
-          </div>
-          <div
-            style={{
-              color: "rgba(255,255,255,0.7)",
-              fontSize: "0.85rem",
-              marginBottom: 14,
-            }}
-          >
-            New account bonus: ₹30 FREE. Withdraw it once directly to your UPI!
-          </div>
-          <button
-            type="button"
-            className="fire-btn"
-            style={{
-              background: "linear-gradient(90deg,#00c864,#00a050)",
-              border: "2px solid #00c864",
-              width: "100%",
-            }}
-            onClick={claimFirstWithdraw}
-            disabled={loadingFirstWithdraw}
-            data-ocid="first_withdraw.button"
-          >
-            {loadingFirstWithdraw
-              ? "Processing..."
-              : "🎉 Claim ₹30 Bonus Withdrawal"}
-          </button>
-        </div>
-      )}
-      {firstWithdrawUsed && (
-        <div
-          style={{
-            background: "linear-gradient(135deg,#1a1a1a,#111)",
-            border: "1px solid #333",
-            borderRadius: 14,
-            padding: "14px 16px",
-            marginBottom: 16,
-            textAlign: "center",
-          }}
-        >
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>
-            ✅ First bonus withdrawal already claimed
-          </div>
-        </div>
-      )}
 
       {/* Support */}
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
