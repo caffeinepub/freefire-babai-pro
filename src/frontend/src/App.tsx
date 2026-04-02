@@ -38,7 +38,62 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { db } from "./firebase";
+import {
+  FCM_SERVER_KEY,
+  VAPID_KEY,
+  db,
+  getToken,
+  messaging,
+  onMessage,
+} from "./firebase";
+
+// ─── FCM Push Notifications ─────────────────────────────────────────────────
+// Register admin device and store FCM token in Firestore
+async function registerAdminFCMToken(): Promise<void> {
+  try {
+    if (!messaging) return;
+    if (VAPID_KEY === "YOUR_VAPID_KEY_HERE") return; // not configured yet
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (token) {
+      await setDoc(doc(db, "adminSettings", "fcm"), {
+        token,
+        updatedAt: Date.now(),
+      });
+    }
+  } catch (_) {
+    // FCM not available
+  }
+}
+
+// Send push notification to admin device
+async function sendAdminNotification(
+  title: string,
+  body: string,
+): Promise<void> {
+  try {
+    if (FCM_SERVER_KEY === "YOUR_FCM_SERVER_KEY_HERE") return; // not configured yet
+    const snap = await getDoc(doc(db, "adminSettings", "fcm"));
+    if (!snap.exists()) return;
+    const adminToken = snap.data()?.token;
+    if (!adminToken) return;
+    await fetch("https://fcm.googleapis.com/fcm/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `key=${FCM_SERVER_KEY}`,
+      },
+      body: JSON.stringify({
+        to: adminToken,
+        notification: { title, body },
+        priority: "high",
+      }),
+    });
+  } catch (_) {
+    // silent fail
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type View =
@@ -923,6 +978,9 @@ function LoginView({
         return;
       }
       setupAfterLogin(uid.trim(), data);
+      if (uid.trim() === "admin") {
+        registerAdminFCMToken();
+      }
       setView(uid.trim() === "admin" ? "admin-dashboard" : "dashboard");
     } catch (_e) {
       showToast("Network error. Try again.", "error");
@@ -1130,12 +1188,20 @@ function SignupView({
           wins: 0,
           kills: 0,
           matchesPlayed: 0,
-          coins: 0,
+          coins: 15,
           blocked: false,
         }),
-        setDoc(doc(db, "wallet", uid.trim()), { coins: 0 }),
+        setDoc(doc(db, "wallet", uid.trim()), {
+          coins: 15,
+          bonusCoins: 15,
+          firstWithdrawUsed: false,
+        }),
       ]);
       showToast("Account created! You can login now.");
+      sendAdminNotification(
+        "🎮 MR.SONIC FF",
+        `New user joined! "${uid.trim()}" just signed up.`,
+      );
       setView("login");
     } catch (_) {
       showToast("Error creating account", "error");
@@ -1461,6 +1527,61 @@ function PaymentView({
   const [utr, setUtr] = useState("");
   const [depositAmt, setDepositAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
+  const [firstWithdrawUsed, setFirstWithdrawUsed] = useState(false);
+  const [loadingFirstWithdraw, setLoadingFirstWithdraw] = useState(false);
+
+  useEffect(() => {
+    const loadFirstWithdrawStatus = async () => {
+      if (!currentUser) return;
+      const snap = await getDoc(doc(db, "wallet", currentUser));
+      if (snap.exists()) {
+        setFirstWithdrawUsed(!!snap.data()?.firstWithdrawUsed);
+      }
+    };
+    loadFirstWithdrawStatus();
+  }, [currentUser]);
+
+  const claimFirstWithdraw = async () => {
+    setLoadingFirstWithdraw(true);
+    try {
+      const walletRef = doc(db, "wallet", currentUser);
+      const snap = await getDoc(walletRef);
+      if (!snap.exists() || snap.data()?.firstWithdrawUsed) {
+        showToast("First withdrawal already used", "error");
+        return;
+      }
+      const walletData = snap.data();
+      const bonusCoins = walletData?.bonusCoins || 0;
+      if (bonusCoins < 15) {
+        showToast("No bonus balance to withdraw", "error");
+        return;
+      }
+      await Promise.all([
+        addDoc(collection(db, "withdraw"), {
+          user: currentUser,
+          amount: 15,
+          final: 15,
+          type: "first_bonus",
+          status: "Pending",
+        }),
+        updateDoc(walletRef, {
+          coins: (walletData?.coins || 0) - 15,
+          firstWithdrawUsed: true,
+        }),
+      ]);
+      setFirstWithdrawUsed(true);
+      loadWallet(currentUser);
+      showToast("🎉 ₹15 First Bonus Withdrawal requested!");
+      sendAdminNotification(
+        "💸 MR.SONIC FF",
+        `"${currentUser}" claimed ₹15 first bonus withdrawal.`,
+      );
+    } catch (_) {
+      showToast("Error processing withdrawal", "error");
+    } finally {
+      setLoadingFirstWithdraw(false);
+    }
+  };
 
   const submitUTR = async () => {
     const dAmt = Number(depositAmt);
@@ -1481,6 +1602,10 @@ function PaymentView({
         status: "Pending",
       });
       showToast("Payment submitted!");
+      sendAdminNotification(
+        "💰 MR.SONIC FF",
+        `New deposit! "${currentUser}" added ₹${dAmt}. UTR: ${utr.trim()}`,
+      );
       setUtr("");
       setDepositAmt("");
     } catch (_) {
@@ -1813,6 +1938,72 @@ function PaymentView({
           </button>
         </div>
       </div>
+
+      {/* First Bonus Withdrawal */}
+      {!firstWithdrawUsed && (
+        <div
+          style={{
+            background: "linear-gradient(135deg,#1a2a0a,#0f1a05)",
+            border: "2px solid #00c864",
+            borderRadius: 14,
+            padding: "18px 16px",
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              color: "#00c864",
+              fontFamily: "Orbitron,sans-serif",
+              fontWeight: 800,
+              fontSize: "1rem",
+              marginBottom: 6,
+            }}
+          >
+            🎁 FIRST BONUS WITHDRAWAL
+          </div>
+          <div
+            style={{
+              color: "rgba(255,255,255,0.7)",
+              fontSize: "0.85rem",
+              marginBottom: 14,
+            }}
+          >
+            New account bonus: ₹15 FREE. Withdraw it once directly to your UPI!
+          </div>
+          <button
+            type="button"
+            className="fire-btn"
+            style={{
+              background: "linear-gradient(90deg,#00c864,#00a050)",
+              border: "2px solid #00c864",
+              width: "100%",
+            }}
+            onClick={claimFirstWithdraw}
+            disabled={loadingFirstWithdraw}
+            data-ocid="first_withdraw.button"
+          >
+            {loadingFirstWithdraw
+              ? "Processing..."
+              : "🎉 Claim ₹15 Bonus Withdrawal"}
+          </button>
+        </div>
+      )}
+      {firstWithdrawUsed && (
+        <div
+          style={{
+            background: "linear-gradient(135deg,#1a1a1a,#111)",
+            border: "1px solid #333",
+            borderRadius: 14,
+            padding: "14px 16px",
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>
+            ✅ First bonus withdrawal already claimed
+          </div>
+        </div>
+      )}
 
       {/* Support */}
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>

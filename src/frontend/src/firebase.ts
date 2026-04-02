@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCgaTpvwfcZd3HUWDYZnZwJwW5huZkOT6I",
@@ -12,3 +13,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+let messaging: ReturnType<typeof getMessaging> | null = null;
+try {
+  messaging = getMessaging(app);
+} catch (_) {
+  // messaging not supported in this environment
+}
+export { messaging, getToken, onMessage };
+
+// ── VAPID Key — Get from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+export const VAPID_KEY = "YOUR_VAPID_KEY_HERE";
+
+// ── FCM Server Key — Get from Firebase Console > Project Settings > Cloud Messaging (Legacy API)
+export const FCM_SERVER_KEY = "YOUR_FCM_SERVER_KEY_HERE";
