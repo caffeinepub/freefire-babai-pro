@@ -149,7 +149,8 @@ type View =
   | "admin-complaints"
   | "admin-chat"
   | "admin-logs"
-  | "payment";
+  | "payment"
+  | "transaction-history";
 
 type NavTab =
   | "home"
@@ -217,6 +218,19 @@ interface LeaderboardEntry {
   displayName: string;
   coins: number;
   wins: number;
+  kills: number;
+}
+
+interface MatchResultData {
+  id: string;
+  matchId: string;
+  mode: string;
+  userId: string;
+  kills: number;
+  killCoins: number;
+  prizeWon: number;
+  result: "WIN" | "LOSE" | "PLAYED";
+  timestamp: unknown;
 }
 
 const GAME_MODES = [
@@ -314,21 +328,105 @@ const GAME_MODES = [
 function LoadingOverlay() {
   return (
     <div className="loading-overlay" data-ocid="app.loading_state">
-      <div>
-        <div className="spinner" style={{ margin: "0 auto 16px" }} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 16,
+        }}
+      >
+        {/* Premium animated ring */}
+        <div style={{ position: "relative", width: 72, height: 72 }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: "3px solid rgba(255,107,0,0.15)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: "3px solid transparent",
+              borderTopColor: "#ff6b00",
+              borderRightColor: "rgba(255,107,0,0.4)",
+              animation: "spin 0.9s linear infinite",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 10,
+              borderRadius: "50%",
+              border: "2px solid transparent",
+              borderTopColor: "#ffb347",
+              animation: "spin 1.4s linear infinite reverse",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: "50%",
+              transform: "translate(-50%,-50%)",
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "#ff6b00",
+              boxShadow: "0 0 12px #ff6b00",
+              animation: "pulse-glow 1.2s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            fontFamily: "Orbitron, sans-serif",
+            fontSize: "0.85rem",
+            fontWeight: 700,
+            color: "#ff6b00",
+            letterSpacing: "0.15em",
+            animation: "pulse-glow 1.5s ease-in-out infinite",
+          }}
+        >
+          MR.SONIC FF
+        </div>
         <p
           style={{
-            color: "rgba(255,255,255,0.6)",
-            fontSize: "0.85rem",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: "0.75rem",
             textAlign: "center",
             margin: 0,
             fontFamily: "Rajdhani, sans-serif",
+            letterSpacing: "0.08em",
           }}
         >
           Loading...
         </p>
       </div>
     </div>
+  );
+}
+
+// ─── Skeleton Shimmer ──────────────────────────────────────────────────────────
+function SkeletonRow({
+  height = 56,
+  radius = 12,
+}: { height?: number; radius?: number }) {
+  return (
+    <div
+      style={{
+        height,
+        borderRadius: radius,
+        background:
+          "linear-gradient(90deg, rgba(255,107,0,0.06) 0%, rgba(255,107,0,0.14) 50%, rgba(255,107,0,0.06) 100%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.5s infinite",
+        marginBottom: 8,
+      }}
+    />
   );
 }
 
@@ -744,7 +842,15 @@ export default function App() {
             showToast={showToast}
           />
         )}
-        {view === "blocked" && <BlockedView key="blocked" logout={logout} />}
+        {view === "blocked" && (
+          <BlockedView
+            key="blocked"
+            logout={logout}
+            banReason={
+              (userData as UserData & { banReason?: string })?.banReason
+            }
+          />
+        )}
         {view === "dashboard" && currentUser && userData && (
           <DashboardView
             key="dashboard"
@@ -788,6 +894,8 @@ export default function App() {
             coins={coins}
             setView={setView}
             logout={logout}
+            darkMode={darkMode}
+            toggleTheme={toggleTheme}
           />
         )}
         {view === "profile-edit" && currentUser && userData && (
@@ -823,6 +931,14 @@ export default function App() {
         {view === "withdraw-history" && currentUser && (
           <WithdrawHistoryView
             key="withdraw-history"
+            currentUser={currentUser}
+            setView={setView}
+            setIsLoading={setIsLoading}
+          />
+        )}
+        {view === "transaction-history" && currentUser && (
+          <TransactionHistoryView
+            key="transaction-history"
             currentUser={currentUser}
             setView={setView}
             setIsLoading={setIsLoading}
@@ -1548,7 +1664,10 @@ function ForgotPasswordView({
 }
 
 // ─── Blocked ──────────────────────────────────────────────────────────────────
-function BlockedView({ logout }: { logout: () => void }) {
+function BlockedView({
+  logout,
+  banReason,
+}: { logout: () => void; banReason?: string }) {
   return (
     <motion.div
       className="blocked-screen"
@@ -1571,12 +1690,31 @@ function BlockedView({ logout }: { logout: () => void }) {
         style={{
           color: "rgba(255,255,255,0.6)",
           fontSize: "0.9rem",
-          marginBottom: 32,
+          marginBottom: banReason ? 12 : 32,
           maxWidth: 300,
+          textAlign: "center",
         }}
       >
         Your account has been blocked. Please contact support for assistance.
       </div>
+      {banReason && (
+        <div
+          style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            borderRadius: 10,
+            padding: "10px 16px",
+            marginBottom: 24,
+            maxWidth: 300,
+            textAlign: "center",
+            fontSize: "0.85rem",
+            color: "#fca5a5",
+          }}
+        >
+          <span style={{ fontWeight: 700, color: "#ef4444" }}>Reason: </span>
+          {banReason}
+        </div>
+      )}
       <button
         type="button"
         className="fire-btn fire-btn-danger"
@@ -1609,6 +1747,7 @@ function PaymentView({
   const [utr, setUtr] = useState("");
   const [depositAmt, setDepositAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
+  const [withdrawUpi, setWithdrawUpi] = useState("");
 
   const submitUTR = async () => {
     const dAmt = Number(depositAmt);
@@ -1661,11 +1800,14 @@ function PaymentView({
           amount: amt,
           final: amt - charge,
           status: "Pending",
+          upiId: withdrawUpi.trim() || "",
+          timestamp: new Date(),
         }),
         setDoc(doc(db, "wallet", currentUser), { coins: coins - amt }),
       ]);
       showToast(`Withdrawal requested. You'll receive ₹${amt - charge}`);
       setWithdrawAmt("");
+      setWithdrawUpi("");
       loadWallet(currentUser);
     } catch (_) {
       showToast("Withdrawal failed", "error");
@@ -1945,6 +2087,15 @@ function PaymentView({
             data-ocid="withdraw.input"
           />
         </div>
+        <div className="field-group">
+          <input
+            className="fire-input"
+            placeholder="Your UPI ID (for payment)"
+            value={withdrawUpi}
+            onChange={(e) => setWithdrawUpi(e.target.value)}
+            data-ocid="withdraw.upi.input"
+          />
+        </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
@@ -1964,6 +2115,15 @@ function PaymentView({
             History
           </button>
         </div>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          style={{ marginTop: 8 }}
+          onClick={() => setView("transaction-history")}
+          data-ocid="payment.transaction_history.button"
+        >
+          💳 Full Transaction History
+        </button>
       </div>
 
       {/* Support */}
@@ -3896,20 +4056,50 @@ function MatchHistoryView({
 }) {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [matchResults, setMatchResults] = useState<
+    Record<string, MatchResultData>
+  >({});
+  const [totalStats, setTotalStats] = useState({
+    played: 0,
+    kills: 0,
+    earnings: 0,
+  });
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const q = query(
-        collection(db, "matches"),
-        where("player", "==", currentUser),
-      );
-      const snap = await getDocs(q);
-      setMatches(
-        snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as MatchData)
-          .reverse(),
-      );
+      const [matchSnap, resultSnap] = await Promise.all([
+        getDocs(
+          query(collection(db, "matches"), where("player", "==", currentUser)),
+        ),
+        getDocs(
+          query(
+            collection(db, "matchResults"),
+            where("userId", "==", currentUser),
+          ),
+        ).catch(() => ({ docs: [] })),
+      ]);
+      const matchList = matchSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as MatchData)
+        .reverse();
+      setMatches(matchList);
+
+      // Build results map by matchId
+      const resultsMap: Record<string, MatchResultData> = {};
+      let totalKills = 0;
+      let totalEarnings = 0;
+      for (const d of resultSnap.docs) {
+        const r = { id: d.id, ...d.data() } as MatchResultData;
+        resultsMap[r.matchId] = r;
+        totalKills += r.kills || 0;
+        totalEarnings += (r.killCoins || 0) + (r.prizeWon || 0);
+      }
+      setMatchResults(resultsMap);
+      setTotalStats({
+        played: matchList.filter((m) => m.status === "completed").length,
+        kills: totalKills,
+        earnings: totalEarnings,
+      });
       setLoaded(true);
     } finally {
       setIsLoading(false);
@@ -3979,7 +4169,46 @@ function MatchHistoryView({
         <ArrowLeft size={16} /> Back
       </button>
       <h2 className="view-title">⚔️ Match History</h2>
+
+      {/* Summary stats */}
+      {loaded && totalStats.played > 0 && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 8,
+            marginBottom: 14,
+          }}
+        >
+          {[
+            { label: "Played", value: totalStats.played, icon: "🎮" },
+            { label: "Total Kills", value: totalStats.kills, icon: "💀" },
+            { label: "Earnings", value: `₹${totalStats.earnings}`, icon: "💰" },
+          ].map((s) => (
+            <div key={s.label} className="stat-box">
+              <div style={{ fontSize: "1.1rem" }}>{s.icon}</div>
+              <div className="stat-value" style={{ fontSize: "0.95rem" }}>
+                {s.value}
+              </div>
+              <div className="stat-label" style={{ fontSize: "0.62rem" }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <ScheduleSection />
+
+      {/* Loading skeletons */}
+      {!loaded && (
+        <div>
+          {[1, 2, 3].map((i) => (
+            <SkeletonRow key={i} height={100} radius={14} />
+          ))}
+        </div>
+      )}
+
       {loaded && matches.length === 0 ? (
         <div className="empty-state" data-ocid="matches.empty_state">
           <div className="empty-state-icon">🎮</div>
@@ -4091,6 +4320,116 @@ function MatchHistoryView({
                 <X size={14} /> Cancel Match
               </button>
             )}
+            {/* Per-game result breakdown for completed matches */}
+            {m.status === "completed" && matchResults[m.id] && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: "10px 12px",
+                  background: "rgba(255,107,0,0.06)",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,107,0,0.2)",
+                }}
+              >
+                {(() => {
+                  const r = matchResults[m.id];
+                  const resultColor =
+                    r.result === "WIN"
+                      ? "#22c55e"
+                      : r.result === "LOSE"
+                        ? "#f87171"
+                        : "#94a3b8";
+                  return (
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            background:
+                              r.result === "WIN"
+                                ? "rgba(34,197,94,0.15)"
+                                : r.result === "LOSE"
+                                  ? "rgba(239,68,68,0.12)"
+                                  : "rgba(255,255,255,0.06)",
+                            color: resultColor,
+                            fontFamily: "Orbitron, sans-serif",
+                          }}
+                        >
+                          {r.result === "WIN"
+                            ? "🏆 WIN"
+                            : r.result === "LOSE"
+                              ? "💔 LOSE"
+                              : "⚔️ PLAYED"}
+                        </span>
+                        <span
+                          style={{ fontSize: "0.72rem", color: "var(--muted)" }}
+                        >
+                          Match Result
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr 1fr",
+                          gap: 6,
+                        }}
+                      >
+                        {[
+                          { label: "Kills", value: `${r.kills}💀` },
+                          { label: "Kill Coins", value: `₹${r.killCoins}` },
+                          {
+                            label: "Prize",
+                            value: r.prizeWon > 0 ? `₹${r.prizeWon} 🏆` : "—",
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            style={{
+                              background: "rgba(255,255,255,0.04)",
+                              borderRadius: 7,
+                              padding: "6px 8px",
+                              textAlign: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: "0.85rem",
+                                fontWeight: 700,
+                                color:
+                                  item.label === "Prize" && r.prizeWon > 0
+                                    ? "#22c55e"
+                                    : "var(--text)",
+                              }}
+                            >
+                              {item.value}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.6rem",
+                                color: "var(--muted)",
+                                marginTop: 1,
+                              }}
+                            >
+                              {item.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         ))
       )}
@@ -4104,7 +4443,10 @@ function LeaderboardView({
   currentUser,
   setIsLoading,
 }: { currentUser: string; setIsLoading: (v: boolean) => void }) {
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [allUsers, setAllUsers] = useState<LeaderboardEntry[]>([]);
+  const [tab, setTab] = useState<"coins" | "wins" | "kills">("coins");
+  const [search, setSearch] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -4118,10 +4460,11 @@ function LeaderboardView({
             displayName: data.displayName || d.id,
             coins: data.coins || 0,
             wins: data.wins || 0,
+            kills: data.kills || 0,
           };
         });
-        all.sort((a, b) => b.coins - a.coins);
-        setEntries(all.slice(0, 20));
+        setAllUsers(all);
+        setLoaded(true);
       } finally {
         setIsLoading(false);
       }
@@ -4133,6 +4476,35 @@ function LeaderboardView({
   const rankEmoji = (i: number) =>
     i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1);
 
+  const sorted = [...allUsers].sort((a, b) =>
+    tab === "coins"
+      ? b.coins - a.coins
+      : tab === "wins"
+        ? b.wins - a.wins
+        : b.kills - a.kills,
+  );
+
+  const filtered = search.trim()
+    ? sorted.filter(
+        (e) =>
+          e.displayName.toLowerCase().includes(search.toLowerCase()) ||
+          e.uid.toLowerCase().includes(search.toLowerCase()),
+      )
+    : sorted;
+
+  const top50 = filtered.slice(0, 50);
+
+  const currentUserRank = sorted.findIndex((e) => e.uid === currentUser);
+  const currentUserEntry = sorted.find((e) => e.uid === currentUser);
+  const isCurrentInTop50 = top50.some((e) => e.uid === currentUser);
+
+  const sortValue = (e: LeaderboardEntry) =>
+    tab === "coins"
+      ? `₹${e.coins}`
+      : tab === "wins"
+        ? `${e.wins} wins`
+        : `${e.kills} kills`;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -4142,14 +4514,68 @@ function LeaderboardView({
       data-ocid="leaderboard.section"
     >
       <h2 className="view-title">🏆 Leaderboard</h2>
-      {entries.length === 0 ? (
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(
+          [
+            { id: "coins", label: "🏆 Coins" },
+            { id: "wins", label: "⚔️ Wins" },
+            { id: "kills", label: "💀 Kills" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            data-ocid={`leaderboard.${t.id}.tab`}
+            style={{
+              flex: 1,
+              padding: "8px 4px",
+              borderRadius: 8,
+              border: `1px solid ${tab === t.id ? "var(--accent)" : "var(--border-color)"}`,
+              background:
+                tab === t.id ? "rgba(255,107,0,0.15)" : "var(--card-bg)",
+              color: tab === t.id ? "var(--accent)" : "var(--muted)",
+              fontFamily: "Rajdhani, sans-serif",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <input
+        className="fire-input"
+        placeholder="🔍 Search by name or UID..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ marginBottom: 12 }}
+        data-ocid="leaderboard.search_input"
+      />
+
+      {/* Loading skeletons */}
+      {!loaded && (
+        <div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <SkeletonRow key={i} height={64} />
+          ))}
+        </div>
+      )}
+
+      {loaded && top50.length === 0 ? (
         <div className="empty-state" data-ocid="leaderboard.empty_state">
           <div className="empty-state-icon">🏆</div>
-          <div>No players yet. Be the first!</div>
+          <div>No players found</div>
         </div>
       ) : (
         <div>
-          {entries.map((e, i) => (
+          {top50.map((e, i) => (
             <div
               key={e.uid}
               className={`leaderboard-row ${e.uid === currentUser ? "current" : ""}`}
@@ -4178,7 +4604,7 @@ function LeaderboardView({
                   )}
                 </div>
                 <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
-                  {e.wins} wins
+                  {e.wins} wins · {e.kills} kills
                 </div>
               </div>
               <div
@@ -4189,10 +4615,69 @@ function LeaderboardView({
                   fontSize: "0.9rem",
                 }}
               >
-                ₹{e.coins}
+                {sortValue(e)}
               </div>
             </div>
           ))}
+
+          {/* Current user's rank if outside top 50 */}
+          {loaded && currentUserEntry && !isCurrentInTop50 && !search && (
+            <div style={{ marginTop: 8 }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  color: "var(--muted)",
+                  fontSize: "0.72rem",
+                  marginBottom: 6,
+                }}
+              >
+                · · ·
+              </div>
+              <div
+                className="leaderboard-row current"
+                data-ocid="leaderboard.user.row"
+              >
+                <div className="rank-badge" style={{ fontSize: "0.7rem" }}>
+                  #{currentUserRank + 1}
+                </div>
+                <div
+                  className="avatar-circle"
+                  style={{ width: 36, height: 36, fontSize: "0.85rem" }}
+                >
+                  {(currentUserEntry.displayName ||
+                    currentUserEntry.uid)[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                    {currentUserEntry.displayName || currentUserEntry.uid}
+                    <span
+                      style={{
+                        color: "var(--accent)",
+                        fontSize: "0.7rem",
+                        marginLeft: 6,
+                      }}
+                    >
+                      (You)
+                    </span>
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+                    {currentUserEntry.wins} wins · {currentUserEntry.kills}{" "}
+                    kills
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {sortValue(currentUserEntry)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
       <Footer />
@@ -4205,7 +4690,10 @@ function NotificationsView({
   currentUser,
   setIsLoading,
 }: { currentUser: string; setIsLoading: (v: boolean) => void }) {
-  const [notifs, setNotifs] = useState<NotifData[]>([]);
+  const [notifs, setNotifs] = useState<(NotifData & { priority?: string })[]>(
+    [],
+  );
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -4217,9 +4705,13 @@ function NotificationsView({
         );
         const snap = await getDocs(q);
         const list = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as NotifData)
+          .map(
+            (d) =>
+              ({ id: d.id, ...d.data() }) as NotifData & { priority?: string },
+          )
           .reverse();
         setNotifs(list);
+        setLoaded(true);
         // Mark all read
         await Promise.all(
           snap.docs
@@ -4232,6 +4724,20 @@ function NotificationsView({
     })();
   }, [currentUser, setIsLoading]);
 
+  const priorityBorder = (priority?: string) =>
+    priority === "urgent"
+      ? "#ef4444"
+      : priority === "important"
+        ? "#ff6b00"
+        : "transparent";
+
+  const priorityBadge = (priority?: string) =>
+    priority === "urgent"
+      ? { label: "🚨 URGENT", bg: "rgba(239,68,68,0.15)", color: "#ef4444" }
+      : priority === "important"
+        ? { label: "⚠️ IMPORTANT", bg: "rgba(255,107,0,0.15)", color: "#ff6b00" }
+        : null;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -4241,48 +4747,81 @@ function NotificationsView({
       data-ocid="notifications.section"
     >
       <h2 className="view-title">🔔 Notifications</h2>
-      {notifs.length === 0 ? (
+
+      {!loaded && (
+        <div>
+          {[1, 2, 3].map((i) => (
+            <SkeletonRow key={i} height={72} />
+          ))}
+        </div>
+      )}
+
+      {loaded && notifs.length === 0 ? (
         <div className="empty-state" data-ocid="notifications.empty_state">
           <div className="empty-state-icon">🔔</div>
           <div>No notifications yet</div>
         </div>
       ) : (
-        notifs.map((n, i) => (
-          <div
-            key={n.id}
-            className={`notif-item ${!n.read ? "unread" : ""}`}
-            data-ocid={`notifications.item.${i + 1}`}
-          >
-            <div>
-              <Bell
-                size={18}
-                color={n.read ? "var(--muted)" : "var(--accent)"}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                {n.title}
+        notifs.map((n, i) => {
+          const pBadge = priorityBadge(n.priority);
+          return (
+            <div
+              key={n.id}
+              className={`notif-item ${!n.read ? "unread" : ""}`}
+              data-ocid={`notifications.item.${i + 1}`}
+              style={{ borderLeft: `3px solid ${priorityBorder(n.priority)}` }}
+            >
+              <div>
+                <Bell
+                  size={18}
+                  color={n.read ? "var(--muted)" : "var(--accent)"}
+                />
               </div>
-              <div
-                style={{
-                  color: "var(--muted)",
-                  fontSize: "0.8rem",
-                  marginTop: 2,
-                }}
-              >
-                {n.message}
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginBottom: 2,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                    {n.title}
+                  </div>
+                  {pBadge && (
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        background: pBadge.bg,
+                        color: pBadge.color,
+                        fontFamily: "Orbitron, sans-serif",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      {pBadge.label}
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
+                  {n.message}
+                </div>
               </div>
+              {!n.read && (
+                <span
+                  className="badge badge-pending"
+                  style={{ fontSize: "0.6rem" }}
+                >
+                  NEW
+                </span>
+              )}
             </div>
-            {!n.read && (
-              <span
-                className="badge badge-pending"
-                style={{ fontSize: "0.6rem" }}
-              >
-                NEW
-              </span>
-            )}
-          </div>
-        ))
+          );
+        })
       )}
       <Footer />
     </motion.div>
@@ -4290,17 +4829,112 @@ function NotificationsView({
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  { id: "orange", color: "#ff6b00", label: "🔥" },
+  { id: "blue", color: "#3b82f6", label: "💙" },
+  { id: "green", color: "#22c55e", label: "💚" },
+  { id: "purple", color: "#a855f7", label: "💜" },
+  { id: "red", color: "#ef4444", label: "❤️" },
+  { id: "pink", color: "#ec4899", label: "🌸" },
+];
+
+function getRankBadge(coins: number) {
+  if (coins >= 10000)
+    return {
+      label: "Master",
+      color: "#ff6b00",
+      bg: "rgba(255,107,0,0.15)",
+      icon: "👑",
+    };
+  if (coins >= 2000)
+    return {
+      label: "Diamond",
+      color: "#60a5fa",
+      bg: "rgba(96,165,250,0.15)",
+      icon: "💎",
+    };
+  if (coins >= 500)
+    return {
+      label: "Gold",
+      color: "#f59e0b",
+      bg: "rgba(245,158,11,0.15)",
+      icon: "🥇",
+    };
+  if (coins >= 100)
+    return {
+      label: "Silver",
+      color: "#94a3b8",
+      bg: "rgba(148,163,184,0.15)",
+      icon: "🥈",
+    };
+  return {
+    label: "Bronze",
+    color: "#cd7f32",
+    bg: "rgba(205,127,50,0.15)",
+    icon: "🥉",
+  };
+}
+
 function ProfileView({
   userData,
   coins,
   setView,
   logout,
+  darkMode,
+  toggleTheme,
 }: {
   userData: UserData;
   coins: number;
   setView: (v: View) => void;
   logout: () => void;
+  darkMode: boolean;
+  toggleTheme: () => void;
 }) {
+  const [avatarColor, setAvatarColor] = useState(
+    (userData as UserData & { avatarColor?: string }).avatarColor || "orange",
+  );
+  const [last5, setLast5] = useState<MatchResultData[]>([]);
+  const [last5Loaded, setLast5Loaded] = useState(false);
+
+  const colorObj =
+    AVATAR_COLORS.find((c) => c.id === avatarColor) || AVATAR_COLORS[0];
+  const rankBadge = getRankBadge(coins);
+  const winRate =
+    userData.matchesPlayed > 0
+      ? Math.round((userData.wins / userData.matchesPlayed) * 100)
+      : 0;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(
+          collection(db, "matchResults"),
+          where("userId", "==", userData.uid),
+          orderBy("timestamp", "desc"),
+        );
+        const snap = await getDocs(q);
+        setLast5(
+          snap.docs
+            .slice(0, 5)
+            .map((d) => ({ id: d.id, ...d.data() }) as MatchResultData),
+        );
+      } catch (_) {
+        /* ignore — collection may not exist yet */
+      } finally {
+        setLast5Loaded(true);
+      }
+    })();
+  }, [userData.uid]);
+
+  const saveAvatarColor = async (colorId: string) => {
+    setAvatarColor(colorId);
+    try {
+      await updateDoc(doc(db, "users", userData.uid), { avatarColor: colorId });
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -4310,15 +4944,64 @@ function ProfileView({
       data-ocid="profile.section"
     >
       <div className="profile-header">
-        <div
-          className="avatar-circle"
-          style={{ width: 80, height: 80, fontSize: "2rem" }}
-        >
-          {(userData.displayName || userData.uid)[0].toUpperCase()}
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <div
+            className="avatar-circle"
+            style={{
+              width: 80,
+              height: 80,
+              fontSize: "2rem",
+              background: colorObj.color,
+            }}
+          >
+            {(userData.displayName || userData.uid)[0].toUpperCase()}
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: -4,
+              right: -4,
+              background: rankBadge.bg,
+              border: `1.5px solid ${rankBadge.color}`,
+              borderRadius: "50%",
+              width: 26,
+              height: 26,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.85rem",
+            }}
+          >
+            {rankBadge.icon}
+          </div>
         </div>
         <div>
-          <div className="profile-name">
-            {userData.displayName || userData.uid}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <div className="profile-name">
+              {userData.displayName || userData.uid}
+            </div>
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 20,
+                background: rankBadge.bg,
+                color: rankBadge.color,
+                border: `1px solid ${rankBadge.color}`,
+                fontFamily: "Orbitron, sans-serif",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {rankBadge.icon} {rankBadge.label}
+            </span>
           </div>
           <div className="profile-uid">UID: {userData.uid}</div>
           {userData.phone && (
@@ -4327,21 +5010,210 @@ function ProfileView({
           {userData.inGameName && (
             <div className="profile-uid">🎮 {userData.inGameName}</div>
           )}
+          <div
+            style={{ marginTop: 4, fontSize: "0.78rem", color: "var(--muted)" }}
+          >
+            🎯 Win Rate:{" "}
+            <span style={{ color: "var(--accent)", fontWeight: 700 }}>
+              {winRate}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Avatar Color Picker */}
+      <div className="card" style={{ marginBottom: 12, padding: "12px 14px" }}>
+        <div
+          style={{
+            fontSize: "0.72rem",
+            color: "var(--muted)",
+            marginBottom: 8,
+            fontFamily: "Rajdhani, sans-serif",
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}
+        >
+          🎨 AVATAR COLOR
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {AVATAR_COLORS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => saveAvatarColor(c.id)}
+              data-ocid={`profile.${c.id}.toggle`}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: c.color,
+                border:
+                  avatarColor === c.id
+                    ? "3px solid white"
+                    : "2px solid transparent",
+                cursor: "pointer",
+                outline: avatarColor === c.id ? `2px solid ${c.color}` : "none",
+                transition: "all 0.2s",
+                transform: avatarColor === c.id ? "scale(1.2)" : "scale(1)",
+              }}
+              title={c.id}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Theme Toggle */}
+      <div className="card" style={{ marginBottom: 12, padding: "12px 14px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "var(--text)",
+            }}
+          >
+            {darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}
+          </span>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            data-ocid="profile.theme.toggle"
+            style={{
+              background: darkMode
+                ? "rgba(255,107,0,0.15)"
+                : "rgba(255,200,0,0.15)",
+              border: `1.5px solid ${darkMode ? "#ff6b00" : "#f59e0b"}`,
+              borderRadius: 20,
+              padding: "6px 16px",
+              cursor: "pointer",
+              color: darkMode ? "#ff6b00" : "#f59e0b",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            {darkMode ? "Switch to Light" : "Switch to Dark"}
+          </button>
         </div>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
-          { value: coins, label: "Coins" },
-          { value: userData.wins, label: "Wins" },
-          { value: userData.kills, label: "Kills" },
-          { value: userData.matchesPlayed, label: "Matches" },
+          { value: coins, label: "Coins", symbol: "₹" },
+          { value: userData.wins, label: "Wins", symbol: "" },
+          { value: userData.kills, label: "Kills", symbol: "" },
+          { value: userData.matchesPlayed, label: "Matches", symbol: "" },
         ].map((s) => (
           <div key={s.label} className="stat-box">
-            <div className="stat-value">₹{s.value}</div>
+            <div className="stat-value">
+              {s.symbol}
+              {s.value}
+            </div>
             <div className="stat-label">{s.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Last 5 matches */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="section-label" style={{ marginBottom: 10 }}>
+          ⚡ Last 5 Matches
+        </div>
+        {!last5Loaded && <SkeletonRow height={48} />}
+        {last5Loaded && last5.length === 0 ? (
+          <div
+            style={{
+              color: "var(--muted)",
+              fontSize: "0.82rem",
+              textAlign: "center",
+              padding: "8px 0",
+            }}
+          >
+            No match results yet
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {last5.map((r, i) => (
+              <div
+                key={r.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "7px 10px",
+                  background: "rgba(255,255,255,0.04)",
+                  borderRadius: 8,
+                  border: `1px solid ${r.result === "WIN" ? "rgba(34,197,94,0.3)" : r.result === "LOSE" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.1)"}`,
+                }}
+                data-ocid={`profile.last5.item.${i + 1}`}
+              >
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                    fontSize: "0.7rem",
+                    minWidth: 40,
+                  }}
+                >
+                  {r.mode?.toUpperCase()}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    fontSize: "0.75rem",
+                    color: "var(--muted)",
+                  }}
+                >
+                  {r.kills}💀 · {r.killCoins > 0 ? `+₹${r.killCoins}` : ""}
+                </div>
+                {r.prizeWon > 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#22c55e",
+                      fontWeight: 700,
+                    }}
+                  >
+                    +₹{r.prizeWon}
+                  </div>
+                )}
+                <span
+                  style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 800,
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    background:
+                      r.result === "WIN"
+                        ? "rgba(34,197,94,0.15)"
+                        : r.result === "LOSE"
+                          ? "rgba(239,68,68,0.12)"
+                          : "rgba(255,255,255,0.06)",
+                    color:
+                      r.result === "WIN"
+                        ? "#22c55e"
+                        : r.result === "LOSE"
+                          ? "#f87171"
+                          : "var(--muted)",
+                    fontFamily: "Orbitron, sans-serif",
+                  }}
+                >
+                  {r.result}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -4361,6 +5233,14 @@ function ProfileView({
           >
             <Edit3 size={16} /> Edit Profile
           </span>
+        </button>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setView("transaction-history")}
+          data-ocid="profile.transaction_history.button"
+        >
+          💳 Transaction History
         </button>
         <button
           type="button"
@@ -4688,6 +5568,232 @@ function WithdrawHistoryView({
               </div>
             </div>
             <span className={`badge ${badgeClass(w.status)}`}>{w.status}</span>
+          </div>
+        ))
+      )}
+      <Footer />
+    </motion.div>
+  );
+}
+
+// ─── Transaction History ─────────────────────────────────────────────────────
+function TransactionHistoryView({
+  currentUser,
+  setView,
+  setIsLoading,
+}: {
+  currentUser: string;
+  setView: (v: View) => void;
+  setIsLoading: (v: boolean) => void;
+}) {
+  const [items, setItems] = useState<
+    {
+      id: string;
+      type: "deposit" | "withdraw";
+      amount: number;
+      status: string;
+      timestamp?: unknown;
+      final?: number;
+      utr?: string;
+    }[]
+  >([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      try {
+        const [paySnap, withdrawSnap] = await Promise.all([
+          getDocs(
+            query(collection(db, "payments"), where("user", "==", currentUser)),
+          ),
+          getDocs(
+            query(collection(db, "withdraw"), where("user", "==", currentUser)),
+          ),
+        ]);
+        const deposits = paySnap.docs.map((d) => ({
+          id: d.id,
+          type: "deposit" as const,
+          amount: d.data().amount || 0,
+          status: d.data().status || "Pending",
+          timestamp: d.data().timestamp,
+          utr: d.data().utr,
+        }));
+        const withdraws = withdrawSnap.docs.map((d) => ({
+          id: d.id,
+          type: "withdraw" as const,
+          amount: d.data().amount || 0,
+          final: d.data().final,
+          status: d.data().status || "Pending",
+          timestamp: d.data().timestamp,
+        }));
+        const all = [...deposits, ...withdraws].sort((a, b) => {
+          const ta = (a.timestamp as { seconds?: number })?.seconds || 0;
+          const tb = (b.timestamp as { seconds?: number })?.seconds || 0;
+          return tb - ta;
+        });
+        setItems(all);
+        setLoaded(true);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [currentUser, setIsLoading]);
+
+  const totalDeposited = items
+    .filter((i) => i.type === "deposit" && i.status === "Approved")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const totalWithdrawn = items
+    .filter((i) => i.type === "withdraw" && i.status === "Approved")
+    .reduce((sum, i) => sum + i.amount, 0);
+
+  const badgeClass = (s: string) =>
+    s === "Approved"
+      ? "badge-approved"
+      : s === "Pending"
+        ? "badge-pending"
+        : "badge-rejected";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="main-content"
+      data-ocid="transaction.section"
+    >
+      <button
+        type="button"
+        className="back-btn"
+        onClick={() => setView("profile")}
+        data-ocid="transaction.back.button"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
+      <h2 className="view-title">💳 Transaction History</h2>
+
+      {/* Summary */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <div className="stat-box">
+          <div
+            className="stat-value"
+            style={{ color: "#22c55e", fontSize: "1rem" }}
+          >
+            ₹{totalDeposited}
+          </div>
+          <div className="stat-label">Total Deposited</div>
+        </div>
+        <div className="stat-box">
+          <div
+            className="stat-value"
+            style={{ color: "#f59e0b", fontSize: "1rem" }}
+          >
+            ₹{totalWithdrawn}
+          </div>
+          <div className="stat-label">Total Withdrawn</div>
+        </div>
+      </div>
+
+      {/* Loading skeletons */}
+      {!loaded && (
+        <div>
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonRow key={i} height={60} />
+          ))}
+        </div>
+      )}
+
+      {loaded && items.length === 0 ? (
+        <div className="empty-state" data-ocid="transaction.empty_state">
+          <div className="empty-state-icon">💳</div>
+          <div>No transactions yet</div>
+        </div>
+      ) : (
+        items.map((item, i) => (
+          <div
+            key={item.id}
+            className="list-item flex-between"
+            data-ocid={`transaction.item.${i + 1}`}
+            style={{
+              borderLeft: `3px solid ${item.type === "deposit" ? "#22c55e" : "#f59e0b"}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  fontSize: "1.1rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background:
+                    item.type === "deposit"
+                      ? "rgba(34,197,94,0.12)"
+                      : "rgba(245,158,11,0.12)",
+                }}
+              >
+                {item.type === "deposit" ? "🔽" : "🔼"}
+              </span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                  ₹{item.amount}
+                  {item.type === "withdraw" && item.final !== undefined && (
+                    <span
+                      style={{
+                        color: "var(--muted)",
+                        fontSize: "0.75rem",
+                        marginLeft: 4,
+                      }}
+                    >
+                      → ₹{item.final}
+                    </span>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 2,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.62rem",
+                      fontWeight: 800,
+                      padding: "1px 6px",
+                      borderRadius: 4,
+                      background:
+                        item.type === "deposit"
+                          ? "rgba(34,197,94,0.15)"
+                          : "rgba(245,158,11,0.15)",
+                      color: item.type === "deposit" ? "#22c55e" : "#f59e0b",
+                    }}
+                  >
+                    {item.type === "deposit" ? "🔽 DEPOSIT" : "🔼 WITHDRAW"}
+                  </span>
+                  {item.utr && (
+                    <span
+                      style={{ color: "var(--muted)", fontSize: "0.68rem" }}
+                    >
+                      UTR: {item.utr}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <span className={`badge ${badgeClass(item.status)}`}>
+              {item.status}
+            </span>
           </div>
         ))
       )}
@@ -5227,6 +6333,9 @@ function AdminDashboardView({
     pendingPayments: 0,
     pendingWithdrawals: 0,
   });
+  const [topBalances, setTopBalances] = useState<
+    { uid: string; name: string; coins: number }[]
+  >([]);
 
   useEffect(() => {
     (async () => {
@@ -5257,6 +6366,20 @@ function AdminDashboardView({
           pendingPayments,
           pendingWithdrawals,
         });
+
+        // Top wallet balances
+        const walletSnap = await getDocs(collection(db, "wallet"));
+        const nameMap: Record<string, string> = {};
+        for (const d of usersSnap.docs) {
+          nameMap[d.id] = d.data().displayName || d.id;
+        }
+        const walletEntries = walletSnap.docs.map((d) => ({
+          uid: d.id,
+          name: nameMap[d.id] || d.id,
+          coins: d.data().coins ?? 0,
+        }));
+        walletEntries.sort((a, b) => b.coins - a.coins);
+        setTopBalances(walletEntries.slice(0, 5));
       } finally {
         setIsLoading(false);
       }
@@ -5352,6 +6475,111 @@ function AdminDashboardView({
           </div>
         ))}
       </div>
+      {/* ── Top Player Balances ── */}
+      {topBalances.length > 0 && (
+        <div
+          style={{ marginBottom: 20 }}
+          data-ocid="admin.dashboard.top_balances.section"
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <div className="section-label" style={{ marginBottom: 0 }}>
+              💰 Top Player Balances
+            </div>
+            <button
+              type="button"
+              className="fire-btn fire-btn-secondary"
+              style={{
+                width: "auto",
+                padding: "4px 10px",
+                fontSize: "0.72rem",
+              }}
+              onClick={() => setView("admin-users")}
+              data-ocid="admin.dashboard.top_balances.button"
+            >
+              View All →
+            </button>
+          </div>
+          <div
+            className="card"
+            style={{
+              padding: "8px 12px",
+              background: "linear-gradient(135deg, #0a0a1a 0%, #1a0a00 100%)",
+              border: "1.5px solid var(--accent)",
+            }}
+          >
+            {topBalances.map((w, idx) => (
+              <div
+                key={w.uid}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 0",
+                  borderBottom:
+                    idx < topBalances.length - 1
+                      ? "1px solid var(--border-color)"
+                      : "none",
+                }}
+                data-ocid={`admin.dashboard.top_balances.item.${idx + 1}`}
+              >
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 900,
+                    fontSize: "0.78rem",
+                    color:
+                      idx === 0
+                        ? "#fbbf24"
+                        : idx === 1
+                          ? "#9ca3af"
+                          : idx === 2
+                            ? "#b45309"
+                            : "var(--muted)",
+                    minWidth: 22,
+                    textAlign: "center",
+                  }}
+                >
+                  #{idx + 1}
+                </div>
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      color: "var(--text)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {w.name}
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: "0.68rem" }}>
+                    {w.uid}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontWeight: 900,
+                    fontSize: "0.95rem",
+                    color: "var(--accent)",
+                  }}
+                >
+                  ₹{w.coins}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="section-label">Quick Navigation</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {quickNav.map((n) => (
@@ -5383,6 +6611,18 @@ function AdminUsersView({
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [coinsInput, setCoinsInput] = useState<Record<string, string>>({});
+  const [banReasonInput, setBanReasonInput] = useState<Record<string, string>>(
+    {},
+  );
+  const [showBanInput, setShowBanInput] = useState<Record<string, boolean>>({});
+  const [walletBalances, setWalletBalances] = useState<
+    Record<string, number | null>
+  >({});
+  const [usersTab, setUsersTab] = useState<"players" | "wallets">("players");
+  const [allWallets, setAllWallets] = useState<
+    { uid: string; name: string; coins: number }[]
+  >([]);
+  const [walletsLoading, setWalletsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -5397,6 +6637,46 @@ function AdminUsersView({
   useEffect(() => {
     load();
   }, [load]);
+
+  const fetchWalletBalance = async (uid: string) => {
+    if (walletBalances[uid] !== undefined) return;
+    try {
+      const snap = await getDoc(doc(db, "wallet", uid));
+      setWalletBalances((prev) => ({
+        ...prev,
+        [uid]: snap.exists() ? (snap.data().coins ?? 0) : 0,
+      }));
+    } catch {
+      setWalletBalances((prev) => ({ ...prev, [uid]: 0 }));
+    }
+  };
+
+  const loadAllWallets = useCallback(async () => {
+    setWalletsLoading(true);
+    try {
+      const [walletSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, "wallet")),
+        getDocs(collection(db, "users")),
+      ]);
+      const nameMap: Record<string, string> = {};
+      for (const d of usersSnap.docs) {
+        nameMap[d.id] = d.data().displayName || d.id;
+      }
+      const entries = walletSnap.docs.map((d) => ({
+        uid: d.id,
+        name: nameMap[d.id] || d.id,
+        coins: d.data().coins ?? 0,
+      }));
+      entries.sort((a, b) => b.coins - a.coins);
+      setAllWallets(entries);
+    } finally {
+      setWalletsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (usersTab === "wallets") loadAllWallets();
+  }, [usersTab, loadAllWallets]);
 
   const filtered = users.filter(
     (u) =>
@@ -5446,15 +6726,20 @@ function AdminUsersView({
     }
   };
 
-  const toggleBlock = async (u: UserData) => {
+  const toggleBlock = async (u: UserData, reason?: string) => {
     setIsLoading(true);
     try {
-      await updateDoc(doc(db, "users", u.uid), { blocked: !u.blocked });
+      const updateData: Record<string, unknown> = { blocked: !u.blocked };
+      if (!u.blocked && reason) updateData.banReason = reason;
+      if (u.blocked) updateData.banReason = "";
+      await updateDoc(doc(db, "users", u.uid), updateData);
       await logAdminAction(
-        `${u.blocked ? "Unblocked" : "Blocked"} user`,
+        `${u.blocked ? "Unblocked" : "Blocked"} user${reason ? ` (Reason: ${reason})` : ""}`,
         u.uid,
       );
       showToast(u.blocked ? "User unblocked" : "User blocked");
+      setShowBanInput((prev) => ({ ...prev, [u.uid]: false }));
+      setBanReasonInput((prev) => ({ ...prev, [u.uid]: "" }));
       load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -5483,180 +6768,442 @@ function AdminUsersView({
     }
   };
 
+  const totalCirculation = allWallets.reduce((s, w) => s + w.coins, 0);
+
   return (
     <div data-ocid="admin.users.section">
       <h2 className="view-title">👥 Users ({users.length})</h2>
-      <input
-        className="fire-input"
-        placeholder="Search by UID or name..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: 12 }}
-        data-ocid="admin.users.search_input"
-      />
-      {filtered.map((u, i) => (
-        <div
-          key={u.uid}
-          className="card"
-          style={{ marginBottom: 8 }}
-          data-ocid={`admin.users.item.${i + 1}`}
-        >
-          <div
+      {/* Tab Toggle */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          marginBottom: 14,
+          background: "var(--card-bg)",
+          borderRadius: 10,
+          padding: 4,
+          border: "1px solid var(--border-color)",
+        }}
+      >
+        {(["players", "wallets"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            data-ocid={`admin.users.${tab}.tab`}
+            onClick={() => setUsersTab(tab)}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 6,
+              flex: 1,
+              padding: "7px 0",
+              borderRadius: 8,
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "Rajdhani, sans-serif",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              background: usersTab === tab ? "var(--accent)" : "transparent",
+              color: usersTab === tab ? "white" : "var(--muted)",
+              transition: "all 0.2s",
             }}
           >
-            <div>
+            {tab === "players" ? "👥 All Players" : "💰 Wallet Balances"}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Wallet Balances Tab ── */}
+      {usersTab === "wallets" && (
+        <div data-ocid="admin.users.wallets.section">
+          {walletsLoading ? (
+            <div data-ocid="admin.users.wallets.loading_state">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div
+                  key={n}
+                  style={{
+                    height: 54,
+                    borderRadius: 10,
+                    background: "var(--card-bg)",
+                    marginBottom: 8,
+                    animation: "pulse 1.4s ease-in-out infinite",
+                    opacity: 0.6,
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
               <div
+                className="card"
                 style={{
-                  fontWeight: 700,
-                  fontSize: "0.9rem",
-                  color: "var(--accent)",
+                  marginBottom: 12,
+                  textAlign: "center",
+                  background:
+                    "linear-gradient(135deg, #0a0a1a 0%, #1a0a00 100%)",
+                  border: "1.5px solid var(--accent)",
                 }}
               >
-                {u.uid}
+                <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+                  💰 Total in Circulation
+                </div>
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontSize: "1.5rem",
+                    fontWeight: 900,
+                    color: "var(--accent)",
+                  }}
+                >
+                  ₹{totalCirculation}
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: "0.7rem" }}>
+                  across {allWallets.length} wallets
+                </div>
               </div>
-              <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {u.displayName} | {u.phone}
-              </div>
+              {allWallets.map((w, idx) => (
+                <div
+                  key={w.uid}
+                  className="card"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 6,
+                    padding: "10px 12px",
+                  }}
+                  data-ocid={`admin.wallets.item.${idx + 1}`}
+                >
+                  <div
+                    style={{
+                      fontFamily: "Orbitron, sans-serif",
+                      fontWeight: 900,
+                      fontSize: "0.85rem",
+                      color:
+                        idx === 0
+                          ? "#fbbf24"
+                          : idx === 1
+                            ? "#9ca3af"
+                            : idx === 2
+                              ? "#b45309"
+                              : "var(--muted)",
+                      minWidth: 24,
+                      textAlign: "center",
+                    }}
+                  >
+                    #{idx + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "0.88rem",
+                        color: "var(--text)",
+                      }}
+                    >
+                      {w.name}
+                    </div>
+                    <div style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
+                      {w.uid}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "Orbitron, sans-serif",
+                      fontWeight: 900,
+                      fontSize: "1.05rem",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    ₹{w.coins}
+                  </div>
+                </div>
+              ))}
+              {allWallets.length === 0 && (
+                <div
+                  className="empty-state"
+                  data-ocid="admin.wallets.empty_state"
+                >
+                  <div className="empty-state-icon">💰</div>
+                  <div>No wallet data found</div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── All Players Tab ── */}
+      {usersTab === "players" && (
+        <>
+          <input
+            className="fire-input"
+            placeholder="Search by UID or name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ marginBottom: 12 }}
+            data-ocid="admin.users.search_input"
+          />
+          {filtered.map((u, i) => (
+            <div
+              key={u.uid}
+              className="card"
+              style={{ marginBottom: 8 }}
+              data-ocid={`admin.users.item.${i + 1}`}
+            >
               <div
                 style={{
                   display: "flex",
-                  gap: 6,
-                  marginTop: 4,
-                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 6,
                 }}
               >
-                <span className="badge badge-waiting">💰 {u.coins || 0}</span>
-                {u.blocked && (
-                  <span className="badge badge-rejected">BLOCKED</span>
-                )}
-                {u.phone && phoneCounts[u.phone] > 1 && (
-                  <span
-                    className="badge"
+                <div>
+                  <div
                     style={{
-                      background: "#ef4444",
-                      color: "white",
-                      fontSize: "0.6rem",
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      color: "var(--accent)",
                     }}
                   >
-                    ⚠️ Dup Phone
-                  </span>
-                )}
+                    {u.uid}
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
+                    {u.displayName}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      marginTop: 4,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span className="badge badge-waiting">
+                      💰 {u.coins || 0}
+                    </span>
+                    {u.blocked && (
+                      <span className="badge badge-rejected">BLOCKED</span>
+                    )}
+                    {u.phone && phoneCounts[u.phone] > 1 && (
+                      <span
+                        className="badge"
+                        style={{
+                          background: "#ef4444",
+                          color: "white",
+                          fontSize: "0.6rem",
+                        }}
+                      >
+                        ⚠️ Dup Phone
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="fire-btn fire-btn-secondary"
+                  style={{
+                    width: "auto",
+                    padding: "4px 10px",
+                    fontSize: "0.75rem",
+                  }}
+                  onClick={() => {
+                    const next = expanded === u.uid ? null : u.uid;
+                    setExpanded(next);
+                    if (next) fetchWalletBalance(next);
+                  }}
+                  data-ocid={`admin.users.edit_button.${i + 1}`}
+                >
+                  {expanded === u.uid ? (
+                    <ChevronUp size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                </button>
               </div>
-            </div>
-            <button
-              type="button"
-              className="fire-btn fire-btn-secondary"
-              style={{
-                width: "auto",
-                padding: "4px 10px",
-                fontSize: "0.75rem",
-              }}
-              onClick={() => setExpanded(expanded === u.uid ? null : u.uid)}
-              data-ocid={`admin.users.edit_button.${i + 1}`}
-            >
-              {expanded === u.uid ? (
-                <ChevronUp size={14} />
-              ) : (
-                <ChevronDown size={14} />
+              {expanded === u.uid && (
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border-color)",
+                    paddingTop: 10,
+                  }}
+                >
+                  {/* Phone + Wallet Balance */}
+                  <div
+                    style={{
+                      background: "rgba(255,107,0,0.06)",
+                      borderRadius: 8,
+                      padding: "8px 10px",
+                      marginBottom: 8,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                    }}
+                  >
+                    <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                      📱 Phone:{" "}
+                      <span style={{ color: "var(--text)", fontWeight: 600 }}>
+                        {u.phone || "Not set"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                      💳 Wallet Balance:{" "}
+                      {walletBalances[u.uid] === undefined ? (
+                        <span style={{ color: "var(--muted)" }}>Loading…</span>
+                      ) : (
+                        <span
+                          style={{
+                            color: "#20c997",
+                            fontWeight: 700,
+                            fontFamily: "Orbitron, sans-serif",
+                          }}
+                        >
+                          ₹{walletBalances[u.uid]}
+                        </span>
+                      )}
+                    </div>
+                    {u.blocked &&
+                      (u as UserData & { banReason?: string }).banReason && (
+                        <div style={{ fontSize: "0.72rem", color: "#ef4444" }}>
+                          🚫 Ban reason:{" "}
+                          {(u as UserData & { banReason?: string }).banReason}
+                        </div>
+                      )}
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--muted)",
+                      fontSize: "0.75rem",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Wins: {u.wins} | Kills: {u.kills} | Matches:{" "}
+                    {u.matchesPlayed}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <input
+                      className="fire-input"
+                      type="number"
+                      placeholder="Coins"
+                      value={coinsInput[u.uid] || ""}
+                      onChange={(e) =>
+                        setCoinsInput((prev) => ({
+                          ...prev,
+                          [u.uid]: e.target.value,
+                        }))
+                      }
+                      style={{ flex: 1 }}
+                      data-ocid={`admin.users.coins.input.${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-success"
+                      style={{
+                        width: "auto",
+                        padding: "6px 12px",
+                        fontSize: "0.75rem",
+                      }}
+                      onClick={() =>
+                        addCoins(u.uid, Number(coinsInput[u.uid] || 0))
+                      }
+                      data-ocid={`admin.users.add.button.${i + 1}`}
+                    >
+                      +Add
+                    </button>
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-danger"
+                      style={{
+                        width: "auto",
+                        padding: "6px 12px",
+                        fontSize: "0.75rem",
+                      }}
+                      onClick={() =>
+                        removeCoins(u.uid, Number(coinsInput[u.uid] || 0))
+                      }
+                      data-ocid={`admin.users.remove.button.${i + 1}`}
+                    >
+                      -Remove
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {!u.blocked && (
+                      <button
+                        type="button"
+                        className="fire-btn fire-btn-warning"
+                        style={{ fontSize: "0.78rem" }}
+                        onClick={() =>
+                          setShowBanInput((prev) => ({
+                            ...prev,
+                            [u.uid]: !prev[u.uid],
+                          }))
+                        }
+                        data-ocid={`admin.users.block.toggle.${i + 1}`}
+                      >
+                        🚫 Block
+                      </button>
+                    )}
+                    {u.blocked && (
+                      <button
+                        type="button"
+                        className="fire-btn fire-btn-success"
+                        style={{ fontSize: "0.78rem" }}
+                        onClick={() => toggleBlock(u)}
+                        data-ocid={`admin.users.block.toggle.${i + 1}`}
+                      >
+                        ✅ Unblock
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-danger"
+                      style={{ fontSize: "0.78rem" }}
+                      onClick={() => deleteUser(u.uid)}
+                      data-ocid={`admin.users.delete_button.${i + 1}`}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                  {/* Ban Reason Input */}
+                  {showBanInput[u.uid] && !u.blocked && (
+                    <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                      <input
+                        className="fire-input"
+                        placeholder="Ban reason (optional)"
+                        value={banReasonInput[u.uid] || ""}
+                        onChange={(e) =>
+                          setBanReasonInput((prev) => ({
+                            ...prev,
+                            [u.uid]: e.target.value,
+                          }))
+                        }
+                        style={{ flex: 1 }}
+                        data-ocid={`admin.users.ban_reason.input.${i + 1}`}
+                      />
+                      <button
+                        type="button"
+                        className="fire-btn fire-btn-danger"
+                        style={{
+                          width: "auto",
+                          padding: "6px 12px",
+                          fontSize: "0.78rem",
+                        }}
+                        onClick={() => toggleBlock(u, banReasonInput[u.uid])}
+                        data-ocid={`admin.users.confirm_block.button.${i + 1}`}
+                      >
+                        Confirm Block
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
-          </div>
-          {expanded === u.uid && (
-            <div
-              style={{
-                borderTop: "1px solid var(--border-color)",
-                paddingTop: 10,
-              }}
-            >
-              <div
-                style={{
-                  color: "var(--muted)",
-                  fontSize: "0.75rem",
-                  marginBottom: 8,
-                }}
-              >
-                Wins: {u.wins} | Kills: {u.kills} | Matches: {u.matchesPlayed}
-              </div>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input
-                  className="fire-input"
-                  type="number"
-                  placeholder="Coins"
-                  value={coinsInput[u.uid] || ""}
-                  onChange={(e) =>
-                    setCoinsInput((prev) => ({
-                      ...prev,
-                      [u.uid]: e.target.value,
-                    }))
-                  }
-                  style={{ flex: 1 }}
-                  data-ocid={`admin.users.coins.input.${i + 1}`}
-                />
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-success"
-                  style={{
-                    width: "auto",
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                  }}
-                  onClick={() =>
-                    addCoins(u.uid, Number(coinsInput[u.uid] || 0))
-                  }
-                  data-ocid={`admin.users.add.button.${i + 1}`}
-                >
-                  +Add
-                </button>
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-danger"
-                  style={{
-                    width: "auto",
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                  }}
-                  onClick={() =>
-                    removeCoins(u.uid, Number(coinsInput[u.uid] || 0))
-                  }
-                  data-ocid={`admin.users.remove.button.${i + 1}`}
-                >
-                  -Remove
-                </button>
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  type="button"
-                  className={`fire-btn ${u.blocked ? "fire-btn-success" : "fire-btn-warning"}`}
-                  style={{ fontSize: "0.78rem" }}
-                  onClick={() => toggleBlock(u)}
-                  data-ocid={`admin.users.block.toggle.${i + 1}`}
-                >
-                  {u.blocked ? "✅ Unblock" : "🚫 Block"}
-                </button>
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-danger"
-                  style={{ fontSize: "0.78rem" }}
-                  onClick={() => deleteUser(u.uid)}
-                  data-ocid={`admin.users.delete_button.${i + 1}`}
-                >
-                  🗑️ Delete
-                </button>
-              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="empty-state" data-ocid="admin.users.empty_state">
+              <div className="empty-state-icon">👥</div>
+              <div>No users found</div>
             </div>
           )}
-        </div>
-      ))}
-      {filtered.length === 0 && (
-        <div className="empty-state" data-ocid="admin.users.empty_state">
-          <div className="empty-state-icon">👥</div>
-          <div>No users found</div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -5904,6 +7451,25 @@ function AdminMatchesView({
             ]
           : []),
       ]);
+      // Write matchResults for each player
+      const matchKills2 = killInputs[m.id] || {};
+      const allPlayers: string[] = m.players || [winner];
+      const resultOps = allPlayers.map(async (uid: string) => {
+        const kills = Number.parseInt((matchKills2[uid] as string) || "0") || 0;
+        const killCoinsEarned = kills * perKill;
+        const isWinner = uid === winner;
+        return addDoc(collection(db, "matchResults"), {
+          matchId: m.id,
+          mode: m.mode,
+          userId: uid,
+          kills,
+          killCoins: killCoinsEarned,
+          prizeWon: isWinner ? winnerPrize : 0,
+          result: isWinner ? "WIN" : "LOSE",
+          timestamp: new Date(),
+        }).catch(() => {});
+      });
+      await Promise.all(resultOps);
       await logAdminAction(`Awarded prize ₹${winnerPrize}`, winner);
       showToast(`🏆 Prize ₹${winnerPrize} awarded to ${winner}!`);
       load();
@@ -5953,7 +7519,35 @@ function AdminMatchesView({
           timestamp: new Date(),
         }).catch(() => {}),
       );
-      await Promise.all(notifOps);
+      // Write matchResults for winning/losing team players
+      const losingTeam: string[] = team === "A" ? m.teamB || [] : m.teamA || [];
+      const resultOpsTeam = [
+        ...winningTeam.map((uid: string) =>
+          addDoc(collection(db, "matchResults"), {
+            matchId: m.id,
+            mode: m.mode,
+            userId: uid,
+            kills: 0,
+            killCoins: 0,
+            prizeWon: uid === teamLeader ? prize : 0,
+            result: "WIN",
+            timestamp: new Date(),
+          }).catch(() => {}),
+        ),
+        ...losingTeam.map((uid: string) =>
+          addDoc(collection(db, "matchResults"), {
+            matchId: m.id,
+            mode: m.mode,
+            userId: uid,
+            kills: 0,
+            killCoins: 0,
+            prizeWon: 0,
+            result: "LOSE",
+            timestamp: new Date(),
+          }).catch(() => {}),
+        ),
+      ];
+      await Promise.all([...notifOps, ...resultOpsTeam]);
       await logAdminAction(
         `Team ${team} won Clash Squad, prize ₹${prize} to ${teamLeader}`,
         m.id,
@@ -7050,6 +8644,9 @@ function AdminWithdrawalsView({
   const [filter, setFilter] = useState<"Pending" | "Approved" | "Rejected">(
     "Pending",
   );
+  const [payRefInputs, setPayRefInputs] = useState<Record<string, string>>({});
+  const [approveModal, setApproveModal] = useState<string | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -7069,12 +8666,15 @@ function AdminWithdrawalsView({
     load();
   }, [load]);
 
-  const approve = async (id: string, user: string) => {
+  const approve = async (id: string, user: string, payRef?: string) => {
     setIsLoading(true);
     try {
-      await updateDoc(doc(db, "withdraw", id), { status: "Approved" });
+      const updateData: Record<string, unknown> = { status: "Approved" };
+      if (payRef) updateData.paymentRef = payRef;
+      await updateDoc(doc(db, "withdraw", id), updateData);
       await logAdminAction("Approved withdrawal", user);
       showToast("Withdrawal approved!");
+      setApproveModal(null);
       load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -7099,6 +8699,22 @@ function AdminWithdrawalsView({
     }
   };
 
+  const bulkApprove = async () => {
+    if (!bulkConfirm) {
+      setBulkConfirm(true);
+      return;
+    }
+    setIsLoading(true);
+    setBulkConfirm(false);
+    try {
+      const pending = withdraws.filter((w) => w.status === "Pending");
+      await Promise.all(pending.map((w) => approve(w.id, w.user)));
+      showToast(`Bulk approved ${pending.length} withdrawals!`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filtered = withdraws.filter((w) => w.status === filter);
   const badgeClass = (s: string) =>
     s === "Approved"
@@ -7110,7 +8726,15 @@ function AdminWithdrawalsView({
   return (
     <div data-ocid="admin.withdrawals.section">
       <h2 className="view-title">💰 Withdrawals</h2>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          marginBottom: 12,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         {(["Pending", "Approved", "Rejected"] as const).map((f) => (
           <button
             key={f}
@@ -7132,7 +8756,116 @@ function AdminWithdrawalsView({
             {f} ({withdraws.filter((w) => w.status === f).length})
           </button>
         ))}
+        {filter === "Pending" && filtered.length > 0 && (
+          <button
+            type="button"
+            className={`fire-btn ${bulkConfirm ? "fire-btn-danger" : "fire-btn-success"}`}
+            style={{
+              width: "auto",
+              padding: "4px 12px",
+              fontSize: "0.78rem",
+              marginLeft: "auto",
+            }}
+            onClick={bulkApprove}
+            data-ocid="admin.withdrawals.bulk_confirm_button"
+          >
+            {bulkConfirm
+              ? "⚠️ Confirm Bulk Approve?"
+              : `✅ Approve All (${filtered.length})`}
+          </button>
+        )}
       </div>
+      {/* Approve modal */}
+      {approveModal &&
+        (() => {
+          const w = withdraws.find((x) => x.id === approveModal);
+          if (!w) return null;
+          return (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 100,
+                background: "rgba(0,0,0,0.7)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+              }}
+              data-ocid="admin.withdrawals.dialog"
+            >
+              <div className="card" style={{ width: "100%", maxWidth: 380 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    marginBottom: 8,
+                    color: "var(--accent)",
+                  }}
+                >
+                  ✅ Approve Withdrawal
+                </div>
+                <div
+                  style={{
+                    color: "var(--muted)",
+                    fontSize: "0.82rem",
+                    marginBottom: 12,
+                  }}
+                >
+                  User:{" "}
+                  <strong style={{ color: "var(--text)" }}>{w.user}</strong> ·
+                  Amount: ₹{w.final}
+                  <br />
+                  {(w as WithdrawData & { upiId?: string }).upiId && (
+                    <span>
+                      UPI:{" "}
+                      <strong style={{ color: "var(--accent)" }}>
+                        {(w as WithdrawData & { upiId?: string }).upiId}
+                      </strong>
+                    </span>
+                  )}
+                </div>
+                <div className="field-group">
+                  <div className="field-label">
+                    Payment Reference (optional)
+                  </div>
+                  <input
+                    className="fire-input"
+                    placeholder="UTR / Transaction ID"
+                    value={payRefInputs[approveModal] || ""}
+                    onChange={(e) =>
+                      setPayRefInputs((prev) => ({
+                        ...prev,
+                        [approveModal]: e.target.value,
+                      }))
+                    }
+                    data-ocid="admin.withdrawals.payref.input"
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="fire-btn fire-btn-success"
+                    onClick={() =>
+                      approve(approveModal, w.user, payRefInputs[approveModal])
+                    }
+                    data-ocid="admin.withdrawals.confirm_button"
+                  >
+                    ✓ Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="fire-btn fire-btn-secondary"
+                    onClick={() => setApproveModal(null)}
+                    data-ocid="admin.withdrawals.cancel_button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       {filtered.map((w, i) => (
         <div
           key={w.id}
@@ -7154,6 +8887,29 @@ function AdminWithdrawalsView({
               <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
                 ₹{w.amount} → ₹{w.final} (after fee)
               </div>
+              {(w as WithdrawData & { upiId?: string }).upiId && (
+                <div
+                  style={{
+                    color: "var(--accent)",
+                    fontSize: "0.72rem",
+                    marginTop: 2,
+                  }}
+                >
+                  📲 UPI: {(w as WithdrawData & { upiId?: string }).upiId}
+                </div>
+              )}
+              {(w as WithdrawData & { paymentRef?: string }).paymentRef && (
+                <div
+                  style={{
+                    color: "#22c55e",
+                    fontSize: "0.72rem",
+                    marginTop: 1,
+                  }}
+                >
+                  ✅ Ref:{" "}
+                  {(w as WithdrawData & { paymentRef?: string }).paymentRef}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span className={`badge ${badgeClass(w.status)}`}>
@@ -7169,7 +8925,7 @@ function AdminWithdrawalsView({
                       padding: "5px 10px",
                       fontSize: "0.75rem",
                     }}
-                    onClick={() => approve(w.id, w.user)}
+                    onClick={() => setApproveModal(w.id)}
                     data-ocid={`admin.withdrawals.confirm_button.${i + 1}`}
                   >
                     ✓ Approve
@@ -7213,8 +8969,17 @@ function AdminAnnouncementsView({
 }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [priority, setPriority] = useState<"normal" | "important" | "urgent">(
+    "normal",
+  );
   const [recents, setRecents] = useState<
-    { id: string; title: string; message: string; timestamp: unknown }[]
+    {
+      id: string;
+      title: string;
+      message: string;
+      timestamp: unknown;
+      priority?: string;
+    }[]
   >([]);
 
   const load = useCallback(async () => {
@@ -7258,6 +9023,7 @@ function AdminAnnouncementsView({
           uid: d.id,
           title: title.trim(),
           message: message.trim(),
+          priority,
           read: false,
           timestamp: new Date(),
         }),
@@ -7268,6 +9034,7 @@ function AdminAnnouncementsView({
           uid: "ALL",
           title: title.trim(),
           message: message.trim(),
+          priority,
           read: true,
           timestamp: new Date(),
         }),
@@ -7277,6 +9044,7 @@ function AdminAnnouncementsView({
       showToast(`Announcement sent to ${usersSnap.size} users!`);
       setTitle("");
       setMessage("");
+      setPriority("normal");
       load();
     } catch (_) {
       showToast("Error sending", "error");
@@ -7289,6 +9057,22 @@ function AdminAnnouncementsView({
     <div data-ocid="admin.announcements.section">
       <h2 className="view-title">📢 Announcements</h2>
       <div className="card" style={{ marginBottom: 16 }}>
+        <div className="field-group">
+          <div className="field-label">Priority</div>
+          <select
+            className="fire-input"
+            value={priority}
+            onChange={(e) =>
+              setPriority(e.target.value as "normal" | "important" | "urgent")
+            }
+            data-ocid="admin.announcements.priority.select"
+            style={{ appearance: "auto" }}
+          >
+            <option value="normal">⚪ Normal</option>
+            <option value="important">🟠 Important</option>
+            <option value="urgent">🔴 Urgent</option>
+          </select>
+        </div>
         <div className="field-group">
           <div className="field-label">Title</div>
           <input
@@ -7317,26 +9101,64 @@ function AdminAnnouncementsView({
           onClick={send}
           data-ocid="admin.announcements.submit_button"
         >
-          📢 Send to All Users
+          {priority === "urgent" ? "🚨" : priority === "important" ? "⚠️" : "📢"}{" "}
+          Send to All Users
         </button>
       </div>
       {recents.length > 0 && (
         <>
           <div className="section-label">Recent Announcements</div>
-          {recents.map((r, i) => (
-            <div
-              key={r.id}
-              className="list-item"
-              data-ocid={`admin.announcements.item.${i + 1}`}
-            >
-              <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                {r.title}
+          {recents.map((r, i) => {
+            const priColor =
+              (r as typeof r & { priority?: string }).priority === "urgent"
+                ? "#ef4444"
+                : (r as typeof r & { priority?: string }).priority ===
+                    "important"
+                  ? "#ff6b00"
+                  : "#94a3b8";
+            return (
+              <div
+                key={r.id}
+                className="list-item"
+                data-ocid={`admin.announcements.item.${i + 1}`}
+                style={{ borderLeft: `3px solid ${priColor}` }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginBottom: 2,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                    {r.title}
+                  </div>
+                  {(r as typeof r & { priority?: string }).priority &&
+                    (r as typeof r & { priority?: string }).priority !==
+                      "normal" && (
+                      <span
+                        style={{
+                          fontSize: "0.6rem",
+                          padding: "1px 6px",
+                          borderRadius: 4,
+                          background: "rgba(255,255,255,0.08)",
+                          color: priColor,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {(
+                          r as typeof r & { priority?: string }
+                        ).priority?.toUpperCase()}
+                      </span>
+                    )}
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
+                  {r.message}
+                </div>
               </div>
-              <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {r.message}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </>
       )}
     </div>
