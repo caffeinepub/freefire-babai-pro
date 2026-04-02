@@ -52,7 +52,7 @@ import {
 async function registerAdminFCMToken(): Promise<void> {
   try {
     if (!messaging) return;
-    if (VAPID_KEY === "YOUR_VAPID_KEY_HERE") return; // not configured yet
+    if (!VAPID_KEY) return; // not configured yet
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
@@ -67,13 +67,41 @@ async function registerAdminFCMToken(): Promise<void> {
   }
 }
 
+// Register any user's FCM token in their Firestore doc
+async function registerUserFCMToken(uid: string): Promise<void> {
+  try {
+    if (!messaging) return;
+    if (!VAPID_KEY) return;
+    const permission = Notification.permission;
+    if (permission !== "granted") return;
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (token) {
+      await updateDoc(doc(db, "users", uid), { fcmToken: token });
+    }
+  } catch (_) {
+    // silent fail
+  }
+}
+
+// Show a browser push notification to the current user
+function showBrowserNotification(title: string, body: string): void {
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      vibrate: [200, 100, 200],
+    } as NotificationOptions);
+  }
+}
+
 // Send push notification to admin device
 async function sendAdminNotification(
   title: string,
   body: string,
 ): Promise<void> {
   try {
-    if (FCM_SERVER_KEY === "YOUR_FCM_SERVER_KEY_HERE") return; // not configured yet
+    if (!FCM_SERVER_KEY) return; // not configured yet
     const snap = await getDoc(doc(db, "adminSettings", "fcm"));
     if (!snap.exists()) return;
     const adminToken = snap.data()?.token;
@@ -381,7 +409,26 @@ export default function App() {
       }
     };
     seedAdmin();
-    const t = setTimeout(() => setView("login"), 2500);
+    const t = setTimeout(async () => {
+      const savedUid = localStorage.getItem("ff_session_uid");
+      if (savedUid) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", savedUid));
+          if (userDoc.exists() && !userDoc.data().blocked) {
+            setupAfterLogin(savedUid, userDoc.data() as UserData);
+            setView(savedUid === "admin" ? "admin-dashboard" : "dashboard");
+          } else {
+            localStorage.removeItem("ff_session_uid");
+            setView("login");
+          }
+        } catch (_e) {
+          localStorage.removeItem("ff_session_uid");
+          setView("login");
+        }
+      } else {
+        setView("login");
+      }
+    }, 2500);
     return () => clearTimeout(t);
   }, []);
 
@@ -470,8 +517,41 @@ export default function App() {
       loadUnread(uid);
       loadLiveCount();
 
-      // Request push permission
-      if ("Notification" in window) Notification.requestPermission();
+      // Request push permission & register FCM token for this user
+      if ("Notification" in window) {
+        Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            registerUserFCMToken(uid);
+            if (uid === "admin") registerAdminFCMToken();
+          }
+        });
+      }
+
+      // Real-time listener: show browser push notification when new notification arrives
+      const notifQ = query(
+        collection(db, "notifications"),
+        where("uid", "==", uid),
+        where("read", "==", false),
+        orderBy("timestamp", "desc"),
+      );
+      let firstLoad = true;
+      const notifUnsub = onSnapshot(notifQ, (snap) => {
+        if (firstLoad) {
+          firstLoad = false;
+          return;
+        }
+        for (const change of snap.docChanges()) {
+          if (change.type === "added") {
+            const d = change.doc.data();
+            showBrowserNotification(
+              d.title || "MR.SONIC FF",
+              d.message || d.body || "",
+            );
+          }
+        }
+        loadUnread(uid);
+      });
+      (window as unknown as Record<string, unknown>).__notifUnsub = notifUnsub;
 
       // Wallet refresh every 3s
       const walletInterval = setInterval(() => loadWallet(uid), 3000);
@@ -496,9 +576,12 @@ export default function App() {
     if (notifPollRef.current) clearInterval(notifPollRef.current);
     const li = (window as unknown as Record<string, unknown>).__liveInterval;
     if (typeof li === "number") clearInterval(li as number);
+    const nu = (window as unknown as Record<string, unknown>).__notifUnsub;
+    if (typeof nu === "function") (nu as () => void)();
     setCurrentUser(null);
     setUserData(null);
     setCoins(0);
+    localStorage.removeItem("ff_session_uid");
     setView("login");
     setActiveTab("home");
   }, []);
@@ -978,6 +1061,7 @@ function LoginView({
         return;
       }
       setupAfterLogin(uid.trim(), data);
+      localStorage.setItem("ff_session_uid", uid.trim());
       if (uid.trim() === "admin") {
         registerAdminFCMToken();
       }

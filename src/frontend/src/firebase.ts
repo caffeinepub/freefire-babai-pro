@@ -22,8 +22,7 @@ try {
 }
 export { messaging, getToken, onMessage };
 
-// ── VAPID Key — Get from Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
-export const VAPID_KEY = "YOUR_VAPID_KEY_HERE";
+export const VAPID_KEY =
+  "BCzMqbB_dFDAD5hkqs_tqprrJRnSwSA1kU8lc4GoVKd4wYNY-pj6VAtjXlio3tP-HIsmb2W3oBOy83-pnr1V-Fc";
 
-// ── FCM Server Key — Get from Firebase Console > Project Settings > Cloud Messaging (Legacy API)
-export const FCM_SERVER_KEY = "YOUR_FCM_SERVER_KEY_HERE";
+export const FCM_SERVER_KEY = "";
