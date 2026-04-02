@@ -982,7 +982,18 @@ function LoginView({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.4 }}
         >
-          🎮 CREATE ACCOUNT — JOIN THE BATTLE
+          <img
+            src="/assets/generated/create-account-logo-transparent.dim_80x80.png"
+            alt="Create Account"
+            style={{
+              width: 36,
+              height: 36,
+              marginRight: 10,
+              verticalAlign: "middle",
+              filter: "drop-shadow(0 0 6px #00c864)",
+            }}
+          />
+          CREATE ACCOUNT — JOIN THE BATTLE
         </motion.button>
         <motion.div
           style={{

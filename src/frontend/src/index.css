@@ -1256,35 +1256,40 @@
 
   .create-account-cta {
     width: 100%;
-    padding: 16px;
-    border-radius: 14px;
+    padding: 20px 16px;
+    border-radius: 16px;
     background: linear-gradient(
       135deg,
-      rgba(0, 200, 100, 0.15) 0%,
-      rgba(0, 160, 80, 0.08) 100%
+      rgba(0, 200, 100, 0.22) 0%,
+      rgba(0, 120, 60, 0.12) 100%
     );
-    border: 2px solid rgba(0, 200, 100, 0.5);
-    color: #00c864;
+    border: 2.5px solid rgba(0, 220, 110, 0.65);
+    color: #00e676;
     font-family: "Orbitron", sans-serif;
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
     cursor: pointer;
     transition: all 0.25s ease;
     text-align: center;
-    box-shadow: 0 0 16px rgba(0, 200, 100, 0.15);
+    box-shadow: 0 0 24px rgba(0, 200, 100, 0.25), 0 4px 16px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 4px;
   }
 
   .create-account-cta:hover {
-    border-color: #00e676;
+    border-color: #00ff88;
     background: linear-gradient(
       135deg,
-      rgba(0, 200, 100, 0.25) 0%,
-      rgba(0, 160, 80, 0.15) 100%
+      rgba(0, 220, 110, 0.32) 0%,
+      rgba(0, 160, 80, 0.2) 100%
     );
-    color: #00e676;
-    box-shadow: 0 0 28px rgba(0, 200, 100, 0.3);
-    transform: translateY(-2px);
+    color: #00ff88;
+    box-shadow: 0 0 36px rgba(0, 220, 110, 0.4), 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: translateY(-3px);
   }
 
   @keyframes authBgShift {
