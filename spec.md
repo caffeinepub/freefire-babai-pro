@@ -1,44 +1,55 @@
-# SkyWar - Stick Man Battle Royale
+# MR.SONIC FF Tournament Site
 
 ## Current State
-SkyWar Rooms is a basic multiplayer Firebase demo. Replacing with a full stick man battle royale game.
+SkyWar Rooms / Colour Trade code in project. Need full MR.SONIC FF rebuild.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Animated stick man character with real movement: run, jump, crouch, punch, kick
-- Ground-based 2D scrolling map with platforms, terrain
-- Vehicles on map: jets (fly + shoot), tanks (drive + shoot), bikes (fast), buggys (4-wheel)
-- Weapons scattered on ground: guns, rifles, rockets, ropes (swing), grenades
-- Vehicles: player can enter/exit any vehicle by walking near it
-- Jets: player enters jet, flies it, shoots missiles
-- Tanks: player drives, shoots cannon
-- Bikes/Buggys: fast ground transport
-- Ropes: swing between platforms
-- Solo + Duo mode
-- Room create/join — up to 20 players in one room
-- No time limit — last player/duo alive wins
-- Winner declared on screen with celebration
-- Firebase Firestore real-time sync for all player positions, HP, vehicles, pickups
-- Mobile D-pad + action buttons
-- Keyboard controls for desktop
-- Battle royale shrinking zone (safe zone circle shrinks over time, outside = damage)
+- Full MR.SONIC FF Free Fire tournament platform
+- UID + password authentication (no Firebase Auth)
+- Custom admin account (UID: admin, password: admin123)
+- Session persistence via localStorage
+- Tournament match modes: 1v1, 2v2, Squad 4v4, Clash Squad, BR Solo, BR Duo, BR Squad
+- Wallet system: deposit (min ₹30), withdrawal
+- Admin panel with match management, player list, Room ID/Password assignment
+- Team A/Team B join system for Squad 4v4 and Clash Squad
+- Per-player entry fee auto-calculated (admin sets total, divided by players)
+- Team leader gets prize on winner announcement
+- Per-kill tracker for BR modes
+- Leaderboard, match result history, transaction history
+- Push notifications via FCM (VAPID key: BCzMqbB_dFDAD5hkqs_tqprrJRnSwSA1kU8lc4GoVKd4wYNY-pj6VAtjXlio3tP-HIsmb2W3oBOy83-pnr1V-Fc)
+- Real-time Room ID/Password reveal for players
+- Fixed match schedule 5pm-11pm, 15-min gaps
+- DHURANDAR-FF 3D animation on login/signup
+- MR.SONIC FF watermark on login/signup pages
+- Create Account button (green #00c864, logo-like, first preference)
+- Staggered entrance animations, natural dark backgrounds
+- Payment page (separate, bottom nav 💳)
+- UPI: 8247835354@ibl, WhatsApp: 7013256124 info box
+- Rules & Regulations section
+- Profile rank badge, avatar color picker
+- Admin announcements with priority
+- Player ban/unban
+- Skeleton loaders
+- Phone numbers ONLY visible to admin (hidden from all players)
+- Admin wallet visibility: all player balances, ranked list
+- New users start with 10 coins, no bonus
+- Room auto-close when full
+- PWA support
+- Firebase Firestore backend (ff-war-ddbd9)
 
 ### Modify
-- Replace old SkyWar Rooms demo UI entirely
-- Keep Firebase config (ff-war-ddbd9)
+- Replace current Colour Trade/SkyWar code entirely
 
 ### Remove
-- Old kill-button text demo
+- Colour Trade game code
+- SkyWar Rooms code
+- Bonus withdrawal feature
 
 ## Implementation Plan
-1. Canvas 2D game loop (requestAnimationFrame)
-2. Stick man drawn programmatically with joints (head circle, body line, arms, legs animated)
-3. Scrolling map with platforms, ground, objects
-4. Vehicle system: jets, tanks, bikes, buggys — each with enter/exit, controls, weapon
-5. Weapon pickups on ground: walk over to collect, press button to use
-6. 20-player Firebase sync: positions, HP, vehicle state, pickups
-7. Duo mode: 2 players share a team, last team alive wins
-8. Safe zone circle: shrinks every 60s, outside = 1HP/sec damage
-9. Lobby: Solo/Duo mode select, room create/join, player list, start when ready
-10. Game over: winner announced, confetti/celebration
+1. Build single HTML file with all features using pure HTML/CSS/JS
+2. Firebase Firestore SDK v10.12.2 for all data
+3. localStorage for session persistence
+4. FCM for push notifications
+5. Deploy as index.html
