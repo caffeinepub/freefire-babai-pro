@@ -31,10 +31,12 @@ import {
   getDocs,
   getToken,
   initFirebase,
+  limit,
   messaging,
   onSnapshot,
   orderBy,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -242,6 +244,8 @@ type View =
   | "admin-chat"
   | "admin-logs"
   | "admin-revenue"
+  | "admin-messages"
+  | "messages"
   | "payment";
 
 type NavTab =
@@ -463,6 +467,8 @@ export default function App() {
   >(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const notifPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [broadcastMessages, setBroadcastMessages] = useState<any[]>([]);
+  const [newMsgToast, setNewMsgToast] = useState<string | null>(null);
 
   // ── Theme init
   useEffect(() => {
@@ -481,6 +487,56 @@ export default function App() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // ── Broadcast messages listener (real-time)
+  useEffect(() => {
+    let unsub: (() => void) | null = null;
+    let firstLoad = true;
+    const setupListener = async () => {
+      try {
+        const { initFirebase: _init, ..._ } = await import("./firebase");
+        // Wait for Firebase to be ready
+        const checkReady = () => {
+          if (db) {
+            const q = query(
+              collection(db, "messages"),
+              orderBy("timestamp", "desc"),
+              limit(50),
+            );
+            unsub = onSnapshot(q, (snap) => {
+              const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+              setBroadcastMessages(msgs);
+              if (!firstLoad) {
+                for (const change of snap.docChanges()) {
+                  if (change.type === "added") {
+                    const data = change.doc.data();
+                    const currentViewEl =
+                      document.body.getAttribute("data-current-view");
+                    if (currentViewEl !== "messages") {
+                      const text = data.text || "";
+                      setNewMsgToast(
+                        text.length > 80 ? `${text.slice(0, 80)}...` : text,
+                      );
+                      setTimeout(() => setNewMsgToast(null), 4000);
+                      playNotifSound();
+                    }
+                  }
+                }
+              }
+              firstLoad = false;
+            });
+          } else {
+            setTimeout(checkReady, 500);
+          }
+        };
+        checkReady();
+      } catch (_) {}
+    };
+    setupListener();
+    return () => {
+      if (unsub) unsub();
     };
   }, []);
 
@@ -722,9 +778,44 @@ export default function App() {
   const isAdminView = view.startsWith("admin-");
   const showNav = isLoggedIn && view !== "blocked" && !isAdminView;
 
+  // Track current view on body for toast logic
+  useEffect(() => {
+    document.body.setAttribute("data-current-view", view);
+  }, [view]);
+
   return (
     <div className="app-container">
       {isLoading && <LoadingOverlay />}
+
+      {/* New Message Broadcast Toast */}
+      {newMsgToast && (
+        <div
+          data-ocid="app.toast"
+          style={{
+            position: "fixed",
+            bottom: 80,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#1a1a2e",
+            border: "1px solid var(--orange)",
+            borderRadius: 12,
+            padding: "12px 20px",
+            zIndex: 9999,
+            color: "#fff",
+            maxWidth: 320,
+            width: "90%",
+            boxShadow: "0 4px 20px rgba(255,107,0,0.4)",
+            animation: "slideUp 0.3s ease",
+          }}
+        >
+          <div
+            style={{ color: "var(--orange)", fontWeight: "bold", fontSize: 13 }}
+          >
+            📢 New Announcement
+          </div>
+          <div style={{ fontSize: 14, marginTop: 4 }}>{newMsgToast}</div>
+        </div>
+      )}
 
       {/* Toast */}
       <AnimatePresence>
@@ -964,6 +1055,13 @@ export default function App() {
             showToast={showToast}
           />
         )}
+        {view === "messages" && currentUser && (
+          <MessagesView
+            key="messages"
+            broadcastMessages={broadcastMessages}
+            setView={setView}
+          />
+        )}
         {isAdminView && currentUser && (
           <AdminLayout
             key={view}
@@ -972,6 +1070,7 @@ export default function App() {
             logout={logout}
             showToast={showToast}
             setIsLoading={setIsLoading}
+            broadcastMessages={broadcastMessages}
           />
         )}
       </AnimatePresence>
@@ -1034,6 +1133,15 @@ export default function App() {
               <span>{label}</span>
             </button>
           ))}
+          <button
+            type="button"
+            className={`nav-item ${view === "messages" ? "active" : ""}`}
+            onClick={() => setView("messages")}
+            data-ocid="nav.messages.link"
+          >
+            <span>📢</span>
+            <span>Msgs</span>
+          </button>
         </nav>
       )}
     </div>
@@ -6648,6 +6756,8 @@ type AdminView =
   | "admin-chat"
   | "admin-logs"
   | "admin-revenue"
+  | "admin-messages"
+  | "messages"
   | "payment";
 
 interface AdminLogEntry {
@@ -6686,12 +6796,14 @@ function AdminLayout({
   logout,
   showToast,
   setIsLoading,
+  broadcastMessages,
 }: {
   view: AdminView;
   setView: (v: View) => void;
   logout: () => void;
   showToast: (msg: string, type?: "success" | "error") => void;
   setIsLoading: (v: boolean) => void;
+  broadcastMessages: any[];
 }) {
   const tabs: { id: AdminView; label: string; emoji: string }[] = [
     { id: "admin-dashboard", label: "Dashboard", emoji: "📊" },
@@ -6701,6 +6813,7 @@ function AdminLayout({
     { id: "admin-payments", label: "Payments", emoji: "💸" },
     { id: "admin-withdrawals", label: "Withdrawals", emoji: "💰" },
     { id: "admin-announcements", label: "Announce", emoji: "📢" },
+    { id: "admin-messages", label: "Message Box", emoji: "📨" },
     { id: "admin-complaints", label: "Complaints", emoji: "🚩" },
     { id: "admin-chat", label: "Chat", emoji: "💬" },
     { id: "admin-logs", label: "Logs", emoji: "📋" },
@@ -6832,6 +6945,13 @@ function AdminLayout({
         {view === "admin-logs" && <AdminLogsView setIsLoading={setIsLoading} />}
         {view === "admin-revenue" && (
           <AdminRevenueView showToast={showToast} setIsLoading={setIsLoading} />
+        )}
+        {view === "admin-messages" && (
+          <AdminMessageBoxView
+            showToast={showToast}
+            setIsLoading={setIsLoading}
+            broadcastMessages={broadcastMessages}
+          />
         )}
       </div>
     </motion.div>
@@ -7260,6 +7380,7 @@ function AdminDashboardView({
     { label: "Approve Payments", view: "admin-payments", emoji: "💸" },
     { label: "Approve Withdrawals", view: "admin-withdrawals", emoji: "💰" },
     { label: "Send Announcement", view: "admin-announcements", emoji: "📢" },
+    { label: "Message Box", view: "admin-messages", emoji: "📨" },
     { label: "View Complaints", view: "admin-complaints", emoji: "🚩" },
     { label: "Chat Support", view: "admin-chat", emoji: "💬" },
     { label: "Activity Logs", view: "admin-logs", emoji: "📋" },
@@ -9475,6 +9596,359 @@ function AdminWithdrawalsView({
           <div className="empty-state-icon">💰</div>
           <div>No {filter.toLowerCase()} withdrawals</div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Messages View (User-facing WhatsApp broadcast style) ─────────────────────
+function MessagesView({
+  broadcastMessages,
+  setView,
+}: {
+  broadcastMessages: any[];
+  setView: (v: View) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      style={{ paddingBottom: 80 }}
+      data-ocid="messages.section"
+    >
+      {/* Header */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          background: "var(--card-bg)",
+          borderBottom: "1px solid var(--border-color)",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setView("dashboard")}
+          data-ocid="messages.close_button"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontFamily: "Orbitron, sans-serif",
+              fontWeight: 900,
+              fontSize: "1rem",
+              color: "var(--accent)",
+            }}
+          >
+            📢 Announcements
+          </div>
+          <div style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
+            Official messages from MR.SONIC FF
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "16px", maxWidth: 600, margin: "0 auto" }}>
+        {broadcastMessages.length === 0 ? (
+          <div className="empty-state" data-ocid="messages.empty_state">
+            <div className="empty-state-icon">📢</div>
+            <div>No announcements yet. Stay tuned!</div>
+          </div>
+        ) : (
+          broadcastMessages.map((msg, i) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              data-ocid={`messages.item.${i + 1}`}
+              style={{
+                display: "flex",
+                gap: 12,
+                marginBottom: 14,
+              }}
+            >
+              {/* Logo / Avatar */}
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #ff6b00, #ffaa00)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.1rem",
+                  flexShrink: 0,
+                  boxShadow: "0 2px 8px rgba(255,107,0,0.4)",
+                }}
+              >
+                🎮
+              </div>
+
+              {/* Bubble */}
+              <div
+                style={{
+                  flex: 1,
+                  background: "var(--card-bg)",
+                  borderRadius: "0 12px 12px 12px",
+                  borderLeft: "3px solid var(--accent)",
+                  padding: "10px 14px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "Rajdhani, sans-serif",
+                    fontWeight: 700,
+                    fontSize: "0.82rem",
+                    color: "var(--accent)",
+                    marginBottom: 4,
+                  }}
+                >
+                  {msg.senderName || "MR.SONIC FF"}
+                </div>
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: "0.9rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {msg.text}
+                </div>
+                <div
+                  style={{
+                    marginTop: 6,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 6,
+                    color: "var(--muted)",
+                    fontSize: "0.68rem",
+                  }}
+                >
+                  <span>{msg.date}</span>
+                  <span>{msg.time}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Admin Message Box View ────────────────────────────────────────────────────
+function AdminMessageBoxView({
+  showToast,
+  setIsLoading,
+  broadcastMessages,
+}: {
+  showToast: (msg: string, type?: "success" | "error") => void;
+  setIsLoading: (v: boolean) => void;
+  broadcastMessages: any[];
+}) {
+  const [msgText, setMsgText] = useState("");
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [users, setUsers] = useState<
+    { id: string; displayName: string; phone: string }[]
+  >([]);
+
+  // Load all users (admin only)
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const snap = await getDocs(collection(db, "users"));
+        const list = snap.docs
+          .filter((d) => d.id !== "admin")
+          .map((d) => ({
+            id: d.id,
+            displayName: d.data().displayName || d.id,
+            phone: d.data().phone || "—",
+          }));
+        setUsers(list);
+      } catch (_) {}
+    };
+    loadUsers();
+  }, []);
+
+  const sendMessage = async () => {
+    if (!msgText.trim()) {
+      showToast("Please type a message", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      const dateStr = now.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      await addDoc(collection(db, "messages"), {
+        text: msgText.trim(),
+        time: timeStr,
+        date: dateStr,
+        timestamp: serverTimestamp(),
+        senderName: "MR.SONIC FF",
+      });
+      // Also send as notification to all users
+      const usersSnap = await getDocs(collection(db, "users"));
+      const notifBatch = usersSnap.docs
+        .filter((d) => d.id !== "admin")
+        .map((d) =>
+          addDoc(collection(db, "notifications"), {
+            uid: d.id,
+            title: "📢 MR.SONIC FF Announcement",
+            message: msgText.trim(),
+            read: false,
+            timestamp: new Date(),
+          }),
+        );
+      await Promise.all(notifBatch);
+      sendPushToAllUsers("📢 MR.SONIC FF Announcement", msgText.trim());
+      setMsgText("");
+      setSendSuccess(true);
+      setTimeout(() => setSendSuccess(false), 2000);
+      showToast("Message sent to all players!");
+    } catch (_) {
+      showToast("Error sending message", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div data-ocid="admin.messages.section">
+      <h2 className="view-title">📨 Message Box</h2>
+
+      {/* Compose Area */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="field-label" style={{ marginBottom: 8 }}>
+          📝 New Announcement
+        </div>
+        <textarea
+          className="fire-input"
+          placeholder="Type your announcement..."
+          value={msgText}
+          onChange={(e) => setMsgText(e.target.value)}
+          rows={4}
+          style={{
+            resize: "vertical",
+            fontFamily: "Rajdhani, sans-serif",
+            marginBottom: 10,
+          }}
+          data-ocid="admin.messages.textarea"
+        />
+        <button
+          type="button"
+          className="fire-btn"
+          onClick={sendMessage}
+          data-ocid="admin.messages.submit_button"
+        >
+          📤 Send to All Players
+        </button>
+        {sendSuccess && (
+          <div
+            data-ocid="admin.messages.success_state"
+            style={{
+              marginTop: 8,
+              color: "var(--green-cta)",
+              fontWeight: 700,
+              fontSize: "0.88rem",
+            }}
+          >
+            ✅ Message sent!
+          </div>
+        )}
+      </div>
+
+      {/* Recent Messages */}
+      <div className="section-label">Recent Messages</div>
+      {broadcastMessages.length === 0 ? (
+        <div className="empty-state" data-ocid="admin.messages.empty_state">
+          <div className="empty-state-icon">📨</div>
+          <div>No messages sent yet</div>
+        </div>
+      ) : (
+        broadcastMessages.slice(0, 10).map((msg, i) => (
+          <div
+            key={msg.id}
+            className="list-item"
+            data-ocid={`admin.messages.item.${i + 1}`}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.88rem", marginBottom: 2 }}>
+                {msg.text}
+              </div>
+            </div>
+            <div
+              style={{
+                color: "var(--muted)",
+                fontSize: "0.7rem",
+                textAlign: "right",
+                flexShrink: 0,
+              }}
+            >
+              <div>{msg.date}</div>
+              <div>{msg.time}</div>
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* Users List */}
+      <div className="section-label" style={{ marginTop: 16 }}>
+        👥 All Players
+      </div>
+      {users.length === 0 ? (
+        <div
+          className="empty-state"
+          data-ocid="admin.messages.users.empty_state"
+        >
+          <div className="empty-state-icon">👥</div>
+          <div>No players yet</div>
+        </div>
+      ) : (
+        users.map((u, i) => (
+          <div
+            key={u.id}
+            className="list-item"
+            data-ocid={`admin.messages.users.item.${i + 1}`}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                {u.displayName}
+              </div>
+              <div style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
+                UID: {u.id}
+              </div>
+              <div
+                style={{
+                  color: "var(--accent)",
+                  fontSize: "0.72rem",
+                  marginTop: 2,
+                }}
+              >
+                📱 {u.phone}
+              </div>
+            </div>
+          </div>
+        ))
       )}
     </div>
   );
