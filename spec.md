@@ -1,45 +1,44 @@
-# COLOUR TRADE — Colour Prediction Game
+# SkyWar - Stick Man Battle Royale
 
 ## Current State
-This is a new standalone project. No existing application files. The workspace previously contained an Aviator Demo Game / MR.SONIC FF project.
+SkyWar Rooms is a basic multiplayer Firebase demo. Replacing with a full stick man battle royale game.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Brand new Colour Trading / Prediction game (WinGo-style)
-- Game rounds with countdown timer (e.g., 60 seconds per round)
-- Three colour choices: RED (x2), VIOLET (x4.5), GREEN (x2)
-- Bet amount chips: ₹10, ₹50, ₹100, ₹200, ₹500, custom input
-- Place Bet button locked during result phase
-- Auto round result after countdown ends — random outcome (Red/Green/Violet)
-- Win/Loss logic: correct prediction pays multiplier × bet amount
-- Demo wallet with starting ₹1000 balance
-- Live betting history table: Round #, Color result, Bet Amount, Win/Loss
-- Top Winners leaderboard with fake live data
-- Live fake bets table (other players' bets sliding in)
-- User profile card with wallet balance
-- Result announcement animation (colour reveal)
-- Round number tracker
-- Responsive premium dark casino-style UI
-- Sounds: win chime, loss buzz, tick countdown, result reveal
-- Mute toggle
+- Animated stick man character with real movement: run, jump, crouch, punch, kick
+- Ground-based 2D scrolling map with platforms, terrain
+- Vehicles on map: jets (fly + shoot), tanks (drive + shoot), bikes (fast), buggys (4-wheel)
+- Weapons scattered on ground: guns, rifles, rockets, ropes (swing), grenades
+- Vehicles: player can enter/exit any vehicle by walking near it
+- Jets: player enters jet, flies it, shoots missiles
+- Tanks: player drives, shoots cannon
+- Bikes/Buggys: fast ground transport
+- Ropes: swing between platforms
+- Solo + Duo mode
+- Room create/join — up to 20 players in one room
+- No time limit — last player/duo alive wins
+- Winner declared on screen with celebration
+- Firebase Firestore real-time sync for all player positions, HP, vehicles, pickups
+- Mobile D-pad + action buttons
+- Keyboard controls for desktop
+- Battle royale shrinking zone (safe zone circle shrinks over time, outside = damage)
 
 ### Modify
-- N/A (new project)
+- Replace old SkyWar Rooms demo UI entirely
+- Keep Firebase config (ff-war-ddbd9)
 
 ### Remove
-- N/A (new project)
+- Old kill-button text demo
 
 ## Implementation Plan
-1. Build single-page HTML/CSS/JS app (pure frontend, no backend/Firebase needed for demo)
-2. Game loop: 60s countdown → result → 5s result display → new round
-3. Colour choice buttons: RED, VIOLET, GREEN with multipliers displayed
-4. Bet chip selector + custom input + Place Bet button
-5. Wallet deducted on bet, credited on win
-6. History table updated each round
-7. Fake live bets generated every few seconds for social proof
-8. Top winners panel with fake rotating data
-9. Full premium dark UI matching design preview: deep navy bg, neon purple/pink/gold accents, glassmorphism cards
-10. Animated result reveal (colour flash + win/loss toast)
-11. Sound effects via Web Audio API
-12. Mute toggle in header
+1. Canvas 2D game loop (requestAnimationFrame)
+2. Stick man drawn programmatically with joints (head circle, body line, arms, legs animated)
+3. Scrolling map with platforms, ground, objects
+4. Vehicle system: jets, tanks, bikes, buggys — each with enter/exit, controls, weapon
+5. Weapon pickups on ground: walk over to collect, press button to use
+6. 20-player Firebase sync: positions, HP, vehicle state, pickups
+7. Duo mode: 2 players share a team, last team alive wins
+8. Safe zone circle: shrinks every 60s, outside = 1HP/sec damage
+9. Lobby: Solo/Duo mode select, room create/join, player list, start when ready
+10. Game over: winner announced, confetti/celebration
