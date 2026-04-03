@@ -243,7 +243,7 @@ a {
   border-radius: 50%;
   background: rgba(255, 107, 0, 0.12);
   border: 1px solid rgba(255, 107, 0, 0.25);
-  color: #ff6b00;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -353,7 +353,7 @@ a {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: 0.08em;
-  color: #ff6b00;
+  color: #ffffff;
   text-transform: uppercase;
   animation: dhurandar3d 3s ease-in-out infinite;
   margin-bottom: 4px;
@@ -374,7 +374,7 @@ a {
   font-family: "Orbitron", sans-serif;
   font-size: 1.3rem;
   font-weight: 900;
-  color: #ff6b00;
+  color: #ffffff;
   text-align: center;
   margin-bottom: 8px;
 }
@@ -518,7 +518,7 @@ select.fire-input {
 .fire-btn-secondary {
   background: rgba(255, 107, 0, 0.15);
   border: 1px solid rgba(255, 107, 0, 0.4);
-  color: #ff6b00;
+  color: #ffffff;
   box-shadow: none;
 }
 
@@ -548,7 +548,7 @@ select.fire-input {
 }
 
 .auth-link:hover {
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 /* ================================================================
@@ -588,7 +588,7 @@ select.fire-input {
 }
 
 .nav-item.active {
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 .nav-item.active::before {
@@ -619,7 +619,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 1rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   margin-bottom: 16px;
   letter-spacing: 0.05em;
 }
@@ -628,7 +628,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 12px;
@@ -722,7 +722,7 @@ select.fire-input {
   border-radius: 20px;
   background: rgba(255, 107, 0, 0.12);
   border: 1px solid rgba(255, 107, 0, 0.3);
-  color: #ff6b00;
+  color: #ffffff;
   font-family: "Rajdhani", sans-serif;
   font-weight: 600;
 }
@@ -785,7 +785,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   margin-bottom: 16px;
   text-align: center;
 }
@@ -888,7 +888,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   word-break: break-all;
 }
 
@@ -897,7 +897,7 @@ select.fire-input {
   background: rgba(255, 107, 0, 0.15);
   border: 1px solid rgba(255, 107, 0, 0.3);
   border-radius: 6px;
-  color: #ff6b00;
+  color: #ffffff;
   font-size: 0.7rem;
   cursor: pointer;
   font-family: "Rajdhani", sans-serif;
@@ -954,7 +954,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   min-width: 52px;
 }
 
@@ -1028,7 +1028,7 @@ select.fire-input {
 .rank-other {
   background: rgba(255, 107, 0, 0.1);
   border: 1px solid rgba(255, 107, 0, 0.3);
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 .rank-name {
@@ -1049,7 +1049,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 /* ================================================================
@@ -1120,7 +1120,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 .stat-label {
@@ -1161,7 +1161,7 @@ select.fire-input {
   font-family: "Orbitron", sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   flex: 1;
   letter-spacing: 0.05em;
 }
@@ -1197,7 +1197,7 @@ select.fire-input {
 .admin-tab.active {
   background: rgba(255, 107, 0, 0.2);
   border-color: #ff6b00;
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 .admin-content {
@@ -1292,7 +1292,7 @@ select.fire-input {
 .status-live {
   background: rgba(255, 107, 0, 0.15);
   border: 1px solid rgba(255, 107, 0, 0.4);
-  color: #ff6b00;
+  color: #ffffff;
 }
 .status-waiting {
   background: rgba(99, 102, 241, 0.15);
@@ -1565,7 +1565,7 @@ body.light-mode .bottom-nav {
 }
 
 .rules-num {
-  color: #ff6b00;
+  color: #ffffff;
   font-weight: 700;
   flex-shrink: 0;
   font-family: "Orbitron", sans-serif;
@@ -1645,7 +1645,7 @@ body.light-mode .bottom-nav {
   font-family: "Orbitron", sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffffff;
   margin-bottom: 4px;
 }
 
@@ -1702,7 +1702,7 @@ body.light-mode .bottom-nav {
 }
 
 .welcome-coins span {
-  color: #ff6b00;
+  color: #ffffff;
   font-weight: 700;
   font-family: "Orbitron", sans-serif;
 }
@@ -1767,7 +1767,7 @@ body.light-mode .bottom-nav {
   text-transform: uppercase;
   background: rgba(255, 107, 0, 0.12);
   border: 1px solid rgba(255, 107, 0, 0.3);
-  color: #ff6b00;
+  color: #ffffff;
 }
 
 .badge-pending {
@@ -1868,7 +1868,7 @@ body.light-mode .bottom-nav {
 
 .badge-live {
   background: rgba(255, 107, 0, 0.2);
-  color: #ff6b00;
+  color: #ffffff;
   border: 1px solid rgba(255, 107, 0, 0.4);
 }
 
@@ -2058,7 +2058,7 @@ body.light-mode .bottom-nav {
 }
 
 .footer-text a {
-  color: #ff6b00;
+  color: #ffffff;
   text-decoration: underline;
 }
 
@@ -2067,7 +2067,7 @@ body.light-mode .bottom-nav {
   font-family: "Orbitron", sans-serif;
   font-size: 1.2rem;
   font-weight: 900;
-  color: #ff6b00;
+  color: #ffffff;
   text-align: center;
   letter-spacing: 0.05em;
   margin-bottom: 4px;

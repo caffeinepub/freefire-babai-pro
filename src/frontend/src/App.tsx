@@ -808,9 +808,7 @@ export default function App() {
             animation: "slideUp 0.3s ease",
           }}
         >
-          <div
-            style={{ color: "var(--orange)", fontWeight: "bold", fontSize: 13 }}
-          >
+          <div style={{ color: "#ffffff", fontWeight: "bold", fontSize: 13 }}>
             📢 New Announcement
           </div>
           <div style={{ fontSize: 14, marginTop: 4 }}>{newMsgToast}</div>
@@ -2079,7 +2077,7 @@ function PaymentView({
                 fontSize: "0.7rem",
                 fontFamily: "Orbitron, sans-serif",
                 letterSpacing: 2,
-                color: "#ff6b00",
+                color: "#ffffff",
                 textTransform: "uppercase" as const,
               }}
             >
@@ -2165,7 +2163,7 @@ function PaymentView({
               <div
                 style={{
                   fontSize: "0.65rem",
-                  color: "#ff6b00",
+                  color: "#ffffff",
                   fontFamily: "Rajdhani, sans-serif",
                   letterSpacing: 1,
                   marginBottom: 2,
@@ -2186,7 +2184,7 @@ function PaymentView({
               </div>
             </div>
             <span
-              style={{ fontSize: "0.75rem", color: "#ff6b00", fontWeight: 700 }}
+              style={{ fontSize: "0.75rem", color: "#ffffff", fontWeight: 700 }}
             >
               TAP →
             </span>
@@ -2616,7 +2614,7 @@ function DashboardView({
             right: 12,
             background: "rgba(255,107,0,0.15)",
             border: "1px solid rgba(255,107,0,0.4)",
-            color: "#ff6b00",
+            color: "#ffffff",
             fontSize: "0.65rem",
             fontWeight: 700,
             fontFamily: "Orbitron, sans-serif",
@@ -2838,7 +2836,7 @@ function DashboardView({
                   style={{
                     fontFamily: "Orbitron, sans-serif",
                     fontWeight: 700,
-                    color: "var(--accent)",
+                    color: "#ffffff",
                     fontSize: "0.88rem",
                   }}
                 >
@@ -3094,7 +3092,7 @@ function DashboardView({
               {(mode as any).winnerBonus && (
                 <div className="mode-stat" style={{ fontSize: "0.58rem" }}>
                   Win{" "}
-                  <span style={{ color: "#ff6b00" }}>
+                  <span style={{ color: "#ffffff" }}>
                     +₹{(mode as any).winnerBonus}
                   </span>
                 </div>
@@ -3178,7 +3176,7 @@ function DashboardView({
                     style={{
                       fontWeight: 700,
                       fontSize: "0.88rem",
-                      color: "var(--accent)",
+                      color: "#ffffff",
                     }}
                   >
                     ⚔️ {c.from}
@@ -3551,7 +3549,7 @@ function MatchJoinModal({
               fontFamily: "Orbitron, sans-serif",
               fontSize: "1.3rem",
               fontWeight: 700,
-              color: "var(--accent)",
+              color: "#ffffff",
             }}
           >
             {mode.label}
@@ -3604,7 +3602,7 @@ function MatchJoinModal({
           )}
           {(mode as any).winnerBonus && (
             <div className="stat-box">
-              <div className="stat-value" style={{ color: "#ff6b00" }}>
+              <div className="stat-value" style={{ color: "#ffffff" }}>
                 ₹{(mode as any).winnerBonus}
               </div>
               <div className="stat-label">Winner Bonus</div>
@@ -3913,7 +3911,7 @@ function MatchJoinModal({
                   <span
                     style={{
                       fontSize: "0.65rem",
-                      color: "#ff6b00",
+                      color: "#ffffff",
                       fontFamily: "Orbitron, sans-serif",
                     }}
                   >
@@ -4066,7 +4064,7 @@ function ScheduleSection() {
             style={{
               fontFamily: "Orbitron, sans-serif",
               fontWeight: 700,
-              color: "var(--accent)",
+              color: "#ffffff",
               fontSize: "1rem",
             }}
           >
@@ -4214,7 +4212,7 @@ function ScheduleSection() {
                 <div
                   style={{
                     fontSize: "0.7rem",
-                    color: status === "live" ? "var(--accent)" : "var(--muted)",
+                    color: status === "live" ? "#ffffff" : "var(--muted)",
                     fontWeight: 700,
                   }}
                 >
@@ -4361,7 +4359,7 @@ function MatchHistoryView({
                   style={{
                     fontFamily: "Orbitron, sans-serif",
                     fontWeight: 700,
-                    color: "var(--accent)",
+                    color: "#ffffff",
                     fontSize: "0.9rem",
                   }}
                 >
@@ -4594,7 +4592,7 @@ function LeaderboardView({
     if (i === 2) return "linear-gradient(135deg,#cd7f32,#a0522d)";
     return "rgba(255,107,0,0.12)";
   };
-  const rankColor = (i: number) => (i <= 2 ? "#000" : "#ff6b00");
+  const rankColor = (i: number) => (i <= 2 ? "#000" : "#ffffff");
 
   const PlayerRow = ({
     e,
@@ -4664,7 +4662,7 @@ function LeaderboardView({
           {e.uid === currentUser && (
             <span
               style={{
-                color: "var(--accent)",
+                color: "#ffffff",
                 fontSize: "0.68rem",
                 marginLeft: 5,
               }}
@@ -4689,7 +4687,7 @@ function LeaderboardView({
             <span
               style={{
                 background: "rgba(255,107,0,0.15)",
-                color: "#ff6b00",
+                color: "#ffffff",
                 borderRadius: 20,
                 padding: "1px 5px",
                 fontSize: "0.6rem",
@@ -4733,7 +4731,7 @@ function LeaderboardView({
         style={{
           fontFamily: "Orbitron,sans-serif",
           fontWeight: 700,
-          color: "#ff6b00",
+          color: "#ffffff",
           fontSize: "0.88rem",
           flexShrink: 0,
         }}
@@ -4842,7 +4840,7 @@ function LeaderboardView({
                 fontFamily: "Orbitron,sans-serif",
                 fontWeight: 800,
                 fontSize: "0.82rem",
-                color: "#ff6b00",
+                color: "#ffffff",
                 letterSpacing: 1.5,
                 marginBottom: 12,
                 display: "flex",
@@ -5138,7 +5136,7 @@ function ProfileView({
         if (userData.kills >= 50)
           badges.push({ icon: "💀", label: "Kill Master", color: "#ef4444" });
         if (userData.wins >= 10)
-          badges.push({ icon: "🏆", label: "Legend", color: "#ff6b00" });
+          badges.push({ icon: "🏆", label: "Legend", color: "#ffffff" });
         if (coins >= 500)
           badges.push({ icon: "💎", label: "Rich Player", color: "#818cf8" });
         if (userData.matchesPlayed >= 20)
@@ -5236,7 +5234,7 @@ function ProfileView({
                 fontFamily: "Orbitron, sans-serif",
                 fontSize: "1.1rem",
                 fontWeight: 700,
-                color: "var(--accent)",
+                color: "#ffffff",
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -6509,7 +6507,7 @@ function ClanView({
                       fontFamily: "Orbitron, sans-serif",
                       fontSize: "1.1rem",
                       fontWeight: 900,
-                      color: "var(--accent)",
+                      color: "#ffffff",
                     }}
                   >
                     🛡️ {clanData.name}
@@ -6593,7 +6591,7 @@ function ClanView({
                     <span
                       style={{
                         fontSize: "0.65rem",
-                        color: "var(--accent)",
+                        color: "#ffffff",
                         fontWeight: 700,
                       }}
                     >
@@ -6704,7 +6702,7 @@ function RulesView({ setView }: { setView: (v: View) => void }) {
                 fontFamily: "Orbitron, sans-serif",
                 fontSize: "0.6rem",
                 fontWeight: 700,
-                color: "#ff6b00",
+                color: "#ffffff",
                 flexShrink: 0,
                 marginTop: 2,
               }}
@@ -6845,7 +6843,7 @@ function AdminLayout({
             fontFamily: "Orbitron, sans-serif",
             fontSize: "0.95rem",
             fontWeight: 900,
-            color: "var(--accent)",
+            color: "#ffffff",
           }}
         >
           🔐 ADMIN PANEL
@@ -7037,7 +7035,7 @@ function AdminRevenueView({
           fontFamily: "Orbitron, sans-serif",
           fontWeight: 900,
           fontSize: "1.1rem",
-          color: "var(--accent)",
+          color: "#ffffff",
           marginBottom: 16,
           letterSpacing: 1,
           display: "flex",
@@ -7133,7 +7131,7 @@ function AdminRevenueView({
           {
             label: "Total Matches",
             value: revenue.matchCount,
-            color: "var(--accent)",
+            color: "#ffffff",
             icon: "⚔️",
           },
           {
@@ -7195,7 +7193,7 @@ function AdminRevenueView({
         <div
           style={{
             fontWeight: 700,
-            color: "var(--accent)",
+            color: "#ffffff",
             marginBottom: 6,
             fontFamily: "Orbitron",
             fontSize: "0.78rem",
@@ -7326,7 +7324,7 @@ function AdminDashboardView({
     {
       label: "Total Users",
       value: stats.totalUsers,
-      color: "var(--accent)",
+      color: "#ffffff",
       icon: "👥",
     },
     {
@@ -7743,7 +7741,7 @@ function AdminUsersView({
                 fontFamily: "Orbitron, sans-serif",
                 fontSize: "1.4rem",
                 fontWeight: 900,
-                color: "#ff6b00",
+                color: "#ffffff",
               }}
             >
               ₹{totalCirculation}
@@ -7769,7 +7767,7 @@ function AdminUsersView({
                           : i === 2
                             ? "linear-gradient(135deg,#cd7f32,#a0522d)"
                             : "rgba(255,107,0,0.15)",
-                    color: i <= 2 ? "#000" : "#ff6b00",
+                    color: i <= 2 ? "#000" : "#ffffff",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -7794,7 +7792,7 @@ function AdminUsersView({
                 style={{
                   fontFamily: "Orbitron, sans-serif",
                   fontWeight: 700,
-                  color: "#ff6b00",
+                  color: "#ffffff",
                   fontSize: "0.9rem",
                 }}
               >
@@ -7839,7 +7837,7 @@ function AdminUsersView({
                     style={{
                       fontWeight: 700,
                       fontSize: "0.9rem",
-                      color: "var(--accent)",
+                      color: "#ffffff",
                     }}
                   >
                     {u.uid}
@@ -8444,7 +8442,7 @@ function AdminMatchesView({
               style={{
                 fontWeight: 800,
                 fontSize: "1.05rem",
-                color: "var(--accent)",
+                color: "#ffffff",
                 letterSpacing: 1,
                 fontFamily: "Orbitron, sans-serif",
               }}
@@ -8689,7 +8687,7 @@ function AdminMatchesView({
                 {
                   label: "Max Players",
                   val: `${(sel as any).maxPlayers ?? 2}`,
-                  color: "var(--accent)",
+                  color: "#ffffff",
                 },
                 ...((sel as any).perKill
                   ? [
@@ -8795,7 +8793,7 @@ function AdminMatchesView({
                 style={{
                   fontWeight: 700,
                   fontSize: "0.9rem",
-                  color: "var(--accent)",
+                  color: "#ffffff",
                 }}
               >
                 {m.mode?.toUpperCase()}
@@ -9645,7 +9643,7 @@ function MessagesView({
               fontFamily: "Orbitron, sans-serif",
               fontWeight: 900,
               fontSize: "1rem",
-              color: "var(--accent)",
+              color: "#ffffff",
             }}
           >
             📢 Announcements
@@ -9710,7 +9708,7 @@ function MessagesView({
                     fontFamily: "Rajdhani, sans-serif",
                     fontWeight: 700,
                     fontSize: "0.82rem",
-                    color: "var(--accent)",
+                    color: "#ffffff",
                     marginBottom: 4,
                   }}
                 >
@@ -9939,7 +9937,7 @@ function AdminMessageBoxView({
               </div>
               <div
                 style={{
-                  color: "var(--accent)",
+                  color: "#ffffff",
                   fontSize: "0.72rem",
                   marginTop: 2,
                 }}
@@ -10286,7 +10284,7 @@ function AdminComplaintsView({
             <div
               style={{
                 fontSize: "0.78rem",
-                color: "var(--accent)",
+                color: "#ffffff",
                 marginBottom: 4,
               }}
             >
@@ -10438,7 +10436,7 @@ function AdminChatView({
                     {chats.filter((c) => c.uid === uid).length} messages
                   </div>
                 </div>
-                <span style={{ color: "var(--accent)", fontSize: "0.8rem" }}>
+                <span style={{ color: "#ffffff", fontSize: "0.8rem" }}>
                   View →
                 </span>
               </button>
@@ -10456,9 +10454,7 @@ function AdminChatView({
           >
             <ArrowLeft size={14} /> Back to list
           </button>
-          <div
-            style={{ fontWeight: 700, marginBottom: 8, color: "var(--accent)" }}
-          >
+          <div style={{ fontWeight: 700, marginBottom: 8, color: "#ffffff" }}>
             Chat with: {selectedUid}
           </div>
           <div style={{ minHeight: 200, marginBottom: 12 }}>
