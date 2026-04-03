@@ -462,6 +462,33 @@ a {
   background: rgba(255, 107, 0, 0.08);
 }
 
+select.fire-input option,
+select.fire-input optgroup {
+  background: #111122;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+select.fire-input option:checked,
+select.fire-input option:hover,
+select.fire-input option:focus {
+  background: #ff6b00;
+  color: #ffffff;
+}
+
+select.fire-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M6 8L0 0h12z' fill='%23ff6b00'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
+  padding-right: 38px;
+  background-color: #111122;
+  border: 1.5px solid rgba(255, 107, 0, 0.45);
+  color: #ffffff;
+}
 .fire-btn {
   width: 100%;
   padding: 13px;
