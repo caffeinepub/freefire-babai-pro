@@ -1,13 +1,11 @@
 import {
   ArrowLeft,
   Bell,
-  Check,
   ChevronDown,
   ChevronUp,
   Copy,
   Edit3,
   Flag,
-  History,
   Home,
   LogOut,
   MessageSquare,
@@ -16,7 +14,6 @@ import {
   Swords,
   Trophy,
   User,
-  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -119,6 +116,103 @@ async function sendAdminNotification(
   }
 }
 
+// Send push notification to ALL users (for admin announcements)
+async function sendPushToAllUsers(
+  title: string,
+  message: string,
+): Promise<void> {
+  try {
+    const usersSnap = await getDocs(collection(db, "users"));
+    const tokens: string[] = [];
+    for (const d of usersSnap.docs) {
+      const token = d.data()?.fcmToken;
+      if (token && typeof token === "string") tokens.push(token);
+    }
+    if (tokens.length === 0) return;
+    // Batch up to 500 tokens per request (FCM limit)
+    for (let i = 0; i < tokens.length; i += 500) {
+      const batch = tokens.slice(i, i + 500);
+      await fetch("https://fcm.googleapis.com/fcm/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `key=${FCM_SERVER_KEY}`,
+        },
+        body: JSON.stringify({
+          registration_ids: batch,
+          notification: { title, body: message },
+          priority: "high",
+          android: { priority: "high" },
+          apns: { headers: { "apns-priority": "10" } },
+        }),
+      });
+    }
+  } catch (_) {
+    // silent fail
+  }
+}
+
+// Haptic vibration helper
+function vibrate(pattern: number[] = [50]): void {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// Sound effects using Web Audio API
+function getAudioCtx(): AudioContext {
+  return new (window.AudioContext || (window as any).webkitAudioContext)();
+}
+function playClickSound(): void {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+  } catch (_) {}
+}
+function playWinSound(): void {
+  try {
+    const ctx = getAudioCtx();
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + i * 0.12 + 0.3,
+      );
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.3);
+    });
+  } catch (_) {}
+}
+function playNotifSound(): void {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (_) {}
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type View =
   | "splash"
@@ -136,6 +230,8 @@ type View =
   | "notifications"
   | "chat-support"
   | "report-problem"
+  | "clans"
+  | "rules"
   | "admin-dashboard"
   | "admin-users"
   | "admin-matches"
@@ -166,6 +262,9 @@ interface UserData {
   matchesPlayed: number;
   coins: number;
   blocked: boolean;
+  banReason?: string;
+  fcmToken?: string;
+  clanId?: string;
 }
 
 interface MatchData {
@@ -545,6 +644,7 @@ export default function App() {
               d.title || "MR.SONIC FF",
               d.message || d.body || "",
             );
+            playNotifSound();
           }
         }
         loadUnread(uid);
@@ -742,7 +842,13 @@ export default function App() {
             showToast={showToast}
           />
         )}
-        {view === "blocked" && <BlockedView key="blocked" logout={logout} />}
+        {view === "blocked" && (
+          <BlockedView
+            key="blocked"
+            logout={logout}
+            banReason={userData?.banReason as string | undefined}
+          />
+        )}
         {view === "dashboard" && currentUser && userData && (
           <DashboardView
             key="dashboard"
@@ -782,6 +888,7 @@ export default function App() {
         {view === "profile" && currentUser && userData && (
           <ProfileView
             key="profile"
+            currentUser={currentUser}
             userData={userData}
             coins={coins}
             setView={setView}
@@ -799,6 +906,18 @@ export default function App() {
             showToast={showToast}
           />
         )}
+        {view === "clans" && currentUser && userData && (
+          <ClanView
+            key="clans"
+            currentUser={currentUser}
+            userData={userData}
+            setUserData={setUserData}
+            setView={setView}
+            setIsLoading={setIsLoading}
+            showToast={showToast}
+          />
+        )}
+        {view === "rules" && <RulesView key="rules" setView={setView} />}
         {view === "payment" && currentUser && (
           <PaymentView
             key="payment"
@@ -933,12 +1052,22 @@ function SplashView() {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ textAlign: "center" }}
       >
         <img
           src="/assets/generated/mrsonicff-logo.dim_480x160.png"
           alt="MR.SONIC FF"
           style={{ width: 280, maxWidth: "80vw", marginBottom: 8 }}
         />
+        <motion.span
+          className="dhurandar-title"
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5, type: "spring" }}
+          style={{ display: "block", marginBottom: 4 }}
+        >
+          DHURANDAR-FF
+        </motion.span>
         <div
           style={{
             fontFamily: "Orbitron, sans-serif",
@@ -946,12 +1075,32 @@ function SplashView() {
             color: "rgba(255,183,77,0.7)",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
+            marginBottom: 16,
           }}
         >
           The #1 Free Fire Tournament
         </div>
       </motion.div>
-      <div className="spinner" />
+      {/* Loading progress bar */}
+      <div
+        style={{
+          width: 220,
+          height: 4,
+          background: "rgba(255,107,0,0.15)",
+          borderRadius: 2,
+          overflow: "hidden",
+          marginTop: 8,
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            background: "linear-gradient(90deg, #ff6b00, #ffaa00)",
+            borderRadius: 2,
+            animation: "progressFill 2.5s ease-in-out forwards",
+          }}
+        />
+      </div>
     </motion.div>
   );
 }
@@ -1078,6 +1227,7 @@ function LoginView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
+      <div className="auth-watermark">MR.SONIC FF</div>
       <motion.span
         className="dhurandar-title"
         initial={{ scale: 0.7, opacity: 0 }}
@@ -1261,6 +1411,16 @@ function SignupView({
         showToast("UID already taken", "error");
         return;
       }
+      // Check for referral code
+      const refCode = new URLSearchParams(window.location.search).get("ref");
+      let referrerBonus = false;
+      if (refCode && refCode !== uid.trim()) {
+        try {
+          const refSnap = await getDoc(doc(db, "users", refCode));
+          if (refSnap.exists()) referrerBonus = true;
+        } catch (_) {}
+      }
+
       await Promise.all([
         setDoc(ref, {
           uid: uid.trim(),
@@ -1275,10 +1435,27 @@ function SignupView({
         }),
         setDoc(doc(db, "wallet", uid.trim()), {
           coins: 10,
-          bonusCoins: 30,
-          firstWithdrawUsed: false,
         }),
       ]);
+
+      // Credit referrer if valid
+      if (referrerBonus && refCode) {
+        try {
+          const refWalletSnap = await getDoc(doc(db, "wallet", refCode));
+          const refCoins = refWalletSnap.exists()
+            ? refWalletSnap.data().coins || 0
+            : 0;
+          await setDoc(doc(db, "wallet", refCode), { coins: refCoins + 10 });
+          await addDoc(collection(db, "notifications"), {
+            uid: refCode,
+            title: "🔗 Referral Bonus!",
+            message: `Your friend ${uid.trim()} joined using your referral! +10 coins credited.`,
+            read: false,
+            timestamp: new Date(),
+          });
+        } catch (_) {}
+      }
+
       showToast("Account created! You can login now.");
       sendAdminNotification(
         "🎮 MR.SONIC FF",
@@ -1299,6 +1476,7 @@ function SignupView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
+      <div className="auth-watermark">MR.SONIC FF</div>
       <motion.span
         className="dhurandar-title"
         initial={{ scale: 0.7, opacity: 0 }}
@@ -1432,6 +1610,7 @@ function ForgotPasswordView({
   const [uid, setUid] = useState("");
   const [phone, setPhone] = useState("");
   const [newPass, setNewPass] = useState("");
+  useAuthParticles();
 
   const findUser = async () => {
     if (!uid.trim()) {
@@ -1481,7 +1660,23 @@ function ForgotPasswordView({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      <div className="auth-logo">🔐 RESET PASSWORD</div>
+      <div className="auth-watermark">MR.SONIC FF</div>
+      <motion.span
+        className="dhurandar-title"
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, type: "spring" }}
+      >
+        DHURANDAR-FF
+      </motion.span>
+      <motion.div
+        className="dhurandar-tagline"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+      >
+        ⚔ Reset Your Password ⚔
+      </motion.div>
       <div className="auth-subtitle">
         {step === "find"
           ? "Enter your UID to recover account"
@@ -1548,7 +1743,10 @@ function ForgotPasswordView({
 }
 
 // ─── Blocked ──────────────────────────────────────────────────────────────────
-function BlockedView({ logout }: { logout: () => void }) {
+function BlockedView({
+  logout,
+  banReason,
+}: { logout: () => void; banReason?: string }) {
   return (
     <motion.div
       className="blocked-screen"
@@ -1571,12 +1769,47 @@ function BlockedView({ logout }: { logout: () => void }) {
         style={{
           color: "rgba(255,255,255,0.6)",
           fontSize: "0.9rem",
-          marginBottom: 32,
+          marginBottom: banReason ? 12 : 32,
           maxWidth: 300,
+          textAlign: "center",
         }}
       >
         Your account has been blocked. Please contact support for assistance.
       </div>
+      {banReason && (
+        <div
+          style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: 10,
+            padding: "10px 16px",
+            marginBottom: 24,
+            maxWidth: 300,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "#ef4444",
+              fontWeight: 700,
+              marginBottom: 4,
+              fontFamily: "Orbitron, sans-serif",
+            }}
+          >
+            REASON
+          </div>
+          <div
+            style={{
+              color: "rgba(255,255,255,0.8)",
+              fontSize: "0.85rem",
+              fontFamily: "Rajdhani, sans-serif",
+            }}
+          >
+            {banReason}
+          </div>
+        </div>
+      )}
       <button
         type="button"
         className="fire-btn fire-btn-danger"
@@ -1609,61 +1842,6 @@ function PaymentView({
   const [utr, setUtr] = useState("");
   const [depositAmt, setDepositAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
-  const [firstWithdrawUsed, setFirstWithdrawUsed] = useState(false);
-  const [loadingFirstWithdraw, setLoadingFirstWithdraw] = useState(false);
-
-  useEffect(() => {
-    const loadFirstWithdrawStatus = async () => {
-      if (!currentUser) return;
-      const snap = await getDoc(doc(db, "wallet", currentUser));
-      if (snap.exists()) {
-        setFirstWithdrawUsed(!!snap.data()?.firstWithdrawUsed);
-      }
-    };
-    loadFirstWithdrawStatus();
-  }, [currentUser]);
-
-  const claimFirstWithdraw = async () => {
-    setLoadingFirstWithdraw(true);
-    try {
-      const walletRef = doc(db, "wallet", currentUser);
-      const snap = await getDoc(walletRef);
-      if (!snap.exists() || snap.data()?.firstWithdrawUsed) {
-        showToast("First withdrawal already used", "error");
-        return;
-      }
-      const walletData = snap.data();
-      const bonusCoins = walletData?.bonusCoins || 0;
-      if (bonusCoins < 30) {
-        showToast("No bonus balance to withdraw", "error");
-        return;
-      }
-      await Promise.all([
-        addDoc(collection(db, "withdraw"), {
-          user: currentUser,
-          amount: 30,
-          final: 30,
-          type: "first_bonus",
-          status: "Pending",
-        }),
-        updateDoc(walletRef, {
-          coins: (walletData?.coins || 0) - 30,
-          firstWithdrawUsed: true,
-        }),
-      ]);
-      setFirstWithdrawUsed(true);
-      loadWallet(currentUser);
-      showToast("🎉 ₹30 First Bonus Withdrawal requested!");
-      sendAdminNotification(
-        "💸 MR.SONIC FF",
-        `"${currentUser}" claimed ₹30 first bonus withdrawal.`,
-      );
-    } catch (_) {
-      showToast("Error processing withdrawal", "error");
-    } finally {
-      setLoadingFirstWithdraw(false);
-    }
-  };
 
   const submitUTR = async () => {
     const dAmt = Number(depositAmt);
@@ -2021,72 +2199,6 @@ function PaymentView({
         </div>
       </div>
 
-      {/* First Bonus Withdrawal */}
-      {!firstWithdrawUsed && (
-        <div
-          style={{
-            background: "linear-gradient(135deg,#1a2a0a,#0f1a05)",
-            border: "2px solid #00c864",
-            borderRadius: 14,
-            padding: "18px 16px",
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              color: "#00c864",
-              fontFamily: "Orbitron,sans-serif",
-              fontWeight: 800,
-              fontSize: "1rem",
-              marginBottom: 6,
-            }}
-          >
-            🎁 FIRST BONUS WITHDRAWAL
-          </div>
-          <div
-            style={{
-              color: "rgba(255,255,255,0.7)",
-              fontSize: "0.85rem",
-              marginBottom: 14,
-            }}
-          >
-            New account bonus: ₹30 FREE. Withdraw it once directly to your UPI!
-          </div>
-          <button
-            type="button"
-            className="fire-btn"
-            style={{
-              background: "linear-gradient(90deg,#00c864,#00a050)",
-              border: "2px solid #00c864",
-              width: "100%",
-            }}
-            onClick={claimFirstWithdraw}
-            disabled={loadingFirstWithdraw}
-            data-ocid="first_withdraw.button"
-          >
-            {loadingFirstWithdraw
-              ? "Processing..."
-              : "🎉 Claim ₹30 Bonus Withdrawal"}
-          </button>
-        </div>
-      )}
-      {firstWithdrawUsed && (
-        <div
-          style={{
-            background: "linear-gradient(135deg,#1a1a1a,#111)",
-            border: "1px solid #333",
-            borderRadius: 14,
-            padding: "14px 16px",
-            marginBottom: 16,
-            textAlign: "center",
-          }}
-        >
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>
-            ✅ First bonus withdrawal already claimed
-          </div>
-        </div>
-      )}
-
       {/* Support */}
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
         <button
@@ -2134,7 +2246,7 @@ function DashboardView({
   userData,
   coins,
   setView,
-  setIsLoading,
+  setIsLoading: _setIsLoading,
   showToast,
   setSelectedMode,
 }: {
@@ -2146,12 +2258,12 @@ function DashboardView({
   showToast: (msg: string, type?: "success" | "error") => void;
   setSelectedMode: (m: (typeof GAME_MODES)[0] | null) => void;
 }) {
-  const [adminOpen, setAdminOpen] = useState(false);
-  const [pendingPayments, setPendingPayments] = useState<PaymentData[]>([]);
-  const [pendingWithdraws, setPendingWithdraws] = useState<WithdrawData[]>([]);
   const isAdmin = currentUser === "admin";
   const [activeMatches, setActiveMatches] = useState<MatchData[]>([]);
   const [showRoomMap, setShowRoomMap] = useState<Record<string, boolean>>({});
+  const [pendingChallenges, setPendingChallenges] = useState<
+    { id: string; from: string; mode: string; timestamp: unknown }[]
+  >([]);
   const [modeOccupancy, setModeOccupancy] = useState<
     Record<
       string,
@@ -2211,6 +2323,22 @@ function DashboardView({
     navigator.clipboard.writeText(text).then(() => showToast("Copied! ✅"));
   };
 
+  // Listen for incoming challenges
+  useEffect(() => {
+    if (!currentUser) return;
+    const q = query(
+      collection(db, "challenges"),
+      where("to", "==", currentUser),
+      where("status", "==", "pending"),
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setPendingChallenges(
+        snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any),
+      );
+    });
+    return () => unsub();
+  }, [currentUser]);
+
   useEffect(() => {
     if (!currentUser) return;
     // Query player's own match docs (player == currentUser)
@@ -2250,52 +2378,6 @@ function DashboardView({
     });
     return () => unsub();
   }, [currentUser]);
-
-  const loadAdmin = useCallback(async () => {
-    const [pSnap, wSnap] = await Promise.all([
-      getDocs(
-        query(collection(db, "payments"), where("status", "==", "Pending")),
-      ),
-      getDocs(
-        query(collection(db, "withdraw"), where("status", "==", "Pending")),
-      ),
-    ]);
-    setPendingPayments(
-      pSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as PaymentData),
-    );
-    setPendingWithdraws(
-      wSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as WithdrawData),
-    );
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin && adminOpen) loadAdmin();
-  }, [isAdmin, adminOpen, loadAdmin]);
-
-  const approvePayment = async (id: string, user: string, amount: number) => {
-    setIsLoading(true);
-    try {
-      const wSnap = await getDoc(doc(db, "wallet", user));
-      const cur = wSnap.exists() ? (wSnap.data().coins ?? 0) : 0;
-      await Promise.all([
-        updateDoc(doc(db, "payments", id), { status: "Approved" }),
-        setDoc(doc(db, "wallet", user), { coins: cur + amount }),
-      ]);
-      showToast("Payment approved!");
-      loadAdmin();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      showToast(`Error: ${msg}`, "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const approveWithdraw = async (id: string) => {
-    await updateDoc(doc(db, "withdraw", id), { status: "Approved" });
-    showToast("Withdrawal approved!");
-    loadAdmin();
-  };
 
   return (
     <motion.div
@@ -2441,40 +2523,190 @@ function DashboardView({
         </div>
       </div>
 
+      {/* Quick Join Button */}
+      <button
+        type="button"
+        onClick={() => {
+          vibrate([30]);
+          playClickSound();
+          // Find first available non-full mode
+          const findAndJoin = async () => {
+            try {
+              const snap = await getDocs(
+                query(
+                  collection(db, "matches"),
+                  where("player", "==", "admin"),
+                  where("status", "==", "waiting"),
+                ),
+              );
+              if (!snap.empty) {
+                const roomData = snap.docs[0].data();
+                const mode = GAME_MODES.find((m) => m.id === roomData.mode);
+                if (mode) {
+                  setSelectedMode(mode);
+                  return;
+                }
+              }
+              setSelectedMode(GAME_MODES[0]);
+            } catch (_) {
+              setSelectedMode(GAME_MODES[0]);
+            }
+          };
+          findAndJoin();
+        }}
+        data-ocid="dashboard.quick_join.button"
+        style={{
+          width: "100%",
+          padding: "12px 20px",
+          marginBottom: 12,
+          borderRadius: 12,
+          border: "2px solid rgba(255,107,0,0.5)",
+          background:
+            "linear-gradient(135deg, rgba(255,107,0,0.15), rgba(255,50,0,0.08))",
+          color: "#ff9a00",
+          fontFamily: "Orbitron, sans-serif",
+          fontWeight: 700,
+          fontSize: "0.82rem",
+          letterSpacing: "0.05em",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          boxShadow: "0 0 14px rgba(255,107,0,0.2)",
+          animation: "live-pulse 2s infinite",
+        }}
+      >
+        ⚡ QUICK JOIN — Find Available Match
+      </button>
+
       {/* Quick actions */}
       <div className="section-label">Quick Actions</div>
       <div className="quick-grid">
-        {[
-          {
-            icon: <Swords size={22} />,
-            label: "Join Match",
-            action: () => setView("match-history"),
-          },
-          {
-            icon: <History size={22} />,
-            label: "History",
-            action: () => setView("match-history"),
-          },
-          {
-            icon: <Trophy size={22} />,
-            label: "Leaderboard",
-            action: () => setView("leaderboard"),
-          },
-          {
-            icon: <Wallet size={22} />,
-            label: "Wallet",
-            action: () => setView("deposit-history"),
-          },
-        ].map((item) => (
+        {(
+          [
+            {
+              icon: "⚔️",
+              label: "Join Match",
+              sub: "Enter the Battle",
+              gradient: "linear-gradient(135deg,#ff6b00 0%,#ff0000 100%)",
+              glow: "rgba(255,107,0,0.55)",
+              pattern: "M0 0 L60 0 L60 60 L0 60Z",
+              action: () => {
+                vibrate([30]);
+                playClickSound();
+                // Scroll to game modes grid on dashboard
+                setTimeout(() => {
+                  const el = document.getElementById("game-modes-grid");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 50);
+              },
+            },
+            {
+              icon: "📜",
+              label: "History",
+              sub: "View Past Matches",
+              gradient: "linear-gradient(135deg,#7c3aed 0%,#2563eb 100%)",
+              glow: "rgba(124,58,237,0.5)",
+              pattern: "",
+              action: () => setView("match-history"),
+            },
+            {
+              icon: "🏆",
+              label: "Leaderboard",
+              sub: "Top Players",
+              gradient: "linear-gradient(135deg,#d97706 0%,#fbbf24 100%)",
+              glow: "rgba(217,119,6,0.55)",
+              pattern: "",
+              action: () => setView("leaderboard"),
+            },
+            {
+              icon: "💰",
+              label: "Wallet",
+              sub: "Coins & Payments",
+              gradient: "linear-gradient(135deg,#059669 0%,#34d399 100%)",
+              glow: "rgba(5,150,105,0.55)",
+              pattern: "",
+              action: () => setView("deposit-history"),
+            },
+          ] as const
+        ).map((item) => (
           <button
             type="button"
             key={item.label}
-            className="quick-btn"
             onClick={item.action}
             data-ocid="dashboard.primary_button"
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              background: item.gradient,
+              border: "none",
+              borderRadius: 16,
+              padding: "18px 14px 14px",
+              cursor: "pointer",
+              textAlign: "left",
+              boxShadow: `0 6px 24px ${item.glow}, 0 2px 8px rgba(0,0,0,0.4)`,
+              transition: "transform 0.18s, box-shadow 0.18s",
+              minHeight: 100,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform =
+                "scale(1.04)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.transform =
+                "scale(1)";
+            }}
           >
-            <span style={{ color: "var(--accent)" }}>{item.icon}</span>
-            {item.label}
+            {/* Shimmer overlay */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.08) 50%,transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+            {/* Top: icon */}
+            <div
+              style={{
+                fontSize: "2rem",
+                lineHeight: 1,
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+              }}
+            >
+              {item.icon}
+            </div>
+            {/* Bottom: labels */}
+            <div>
+              <div
+                style={{
+                  fontFamily: "Orbitron,sans-serif",
+                  fontWeight: 800,
+                  fontSize: "0.75rem",
+                  color: "#fff",
+                  letterSpacing: "0.05em",
+                  textShadow: "0 1px 4px rgba(0,0,0,0.5)",
+                  lineHeight: 1.2,
+                }}
+              >
+                {item.label}
+              </div>
+              <div
+                style={{
+                  fontFamily: "Rajdhani,sans-serif",
+                  fontSize: "0.68rem",
+                  color: "rgba(255,255,255,0.75)",
+                  marginTop: 2,
+                }}
+              >
+                {item.sub}
+              </div>
+            </div>
           </button>
         ))}
       </div>
@@ -2683,9 +2915,10 @@ function DashboardView({
       {/* Game modes */}
       <div className="section-label">Game Modes</div>
       <div
+        id="game-modes-grid"
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr",
           gap: 10,
           marginBottom: 16,
         }}
@@ -2782,7 +3015,7 @@ function DashboardView({
               <div
                 className="mode-title"
                 style={{
-                  fontSize: "0.68rem",
+                  fontSize: "0.85rem",
                   letterSpacing: "0.05em",
                   textShadow: "0 0 8px rgba(255,107,0,0.6)",
                 }}
@@ -2885,125 +3118,89 @@ function DashboardView({
         💳 Deposit & Withdraw
       </button>
 
-      {/* Admin Panel */}
-      {isAdmin && (
-        <div className="admin-panel" data-ocid="admin.panel">
-          <button
-            type="button"
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: 0,
-            }}
-            onClick={() => setAdminOpen(!adminOpen)}
-            data-ocid="admin.toggle"
-          >
-            <div className="admin-title">🔐 Admin Panel</div>
-            {adminOpen ? (
-              <ChevronUp size={18} color="#ef4444" />
-            ) : (
-              <ChevronDown size={18} color="#ef4444" />
-            )}
-          </button>
-          {adminOpen && (
-            <div>
-              <div className="section-label" style={{ marginTop: 12 }}>
-                Pending Payments ({pendingPayments.length})
-              </div>
-              {pendingPayments.length === 0 ? (
-                <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
-                  No pending payments
-                </div>
-              ) : (
-                pendingPayments.map((p, i) => (
+      {/* Pending Challenges */}
+      {pendingChallenges.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div className="section-label">📬 Incoming Challenges</div>
+          {pendingChallenges.map((c) => (
+            <div key={c.id} className="list-item" style={{ marginBottom: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <div>
                   <div
-                    key={p.id}
-                    className="list-item"
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
+                      fontWeight: 700,
+                      fontSize: "0.88rem",
+                      color: "var(--accent)",
                     }}
-                    data-ocid={`admin.payment.item.${i + 1}`}
                   >
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                        {p.user}
-                      </div>
-                      <div
-                        style={{ color: "var(--muted)", fontSize: "0.75rem" }}
-                      >
-                        UTR: {p.utr} | ₹{p.amount}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="fire-btn"
-                      style={{
-                        width: "auto",
-                        padding: "6px 14px",
-                        fontSize: "0.8rem",
-                      }}
-                      onClick={() => approvePayment(p.id, p.user, p.amount)}
-                      data-ocid="admin.confirm_button"
-                    >
-                      <Check size={14} />
-                    </button>
+                    ⚔️ {c.from}
                   </div>
-                ))
-              )}
-              <div className="section-label" style={{ marginTop: 12 }}>
-                Pending Withdrawals ({pendingWithdraws.length})
-              </div>
-              {pendingWithdraws.length === 0 ? (
-                <div style={{ color: "var(--muted)", fontSize: "0.8rem" }}>
-                  No pending withdrawals
+                  <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                    Mode:{" "}
+                    {GAME_MODES.find((m) => m.id === c.mode)?.label || c.mode}
+                  </div>
                 </div>
-              ) : (
-                pendingWithdraws.map((w, i) => (
-                  <div
-                    key={w.id}
-                    className="list-item"
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    className="fire-btn fire-btn-success"
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
+                      width: "auto",
+                      padding: "6px 12px",
+                      fontSize: "0.75rem",
                     }}
-                    data-ocid={`admin.withdraw.item.${i + 1}`}
+                    onClick={async () => {
+                      try {
+                        await updateDoc(doc(db, "challenges", c.id), {
+                          status: "accepted",
+                        });
+                        await addDoc(collection(db, "notifications"), {
+                          uid: c.from,
+                          title: "✅ Challenge Accepted!",
+                          message: `${currentUser} accepted your ${GAME_MODES.find((m) => m.id === c.mode)?.label || c.mode} challenge!`,
+                          read: false,
+                          timestamp: new Date(),
+                        });
+                        showToast("Challenge accepted!");
+                      } catch (_) {
+                        showToast("Error", "error");
+                      }
+                    }}
+                    data-ocid="dashboard.challenge.confirm_button"
                   >
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                        {w.user}
-                      </div>
-                      <div
-                        style={{ color: "var(--muted)", fontSize: "0.75rem" }}
-                      >
-                        ₹{w.amount} → ₹{w.final}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="fire-btn"
-                      style={{
-                        width: "auto",
-                        padding: "6px 14px",
-                        fontSize: "0.8rem",
-                      }}
-                      onClick={() => approveWithdraw(w.id)}
-                      data-ocid="admin.confirm_button"
-                    >
-                      <Check size={14} />
-                    </button>
-                  </div>
-                ))
-              )}
+                    ✓ Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="fire-btn fire-btn-danger"
+                    style={{
+                      width: "auto",
+                      padding: "6px 12px",
+                      fontSize: "0.75rem",
+                    }}
+                    onClick={async () => {
+                      try {
+                        await updateDoc(doc(db, "challenges", c.id), {
+                          status: "declined",
+                        });
+                        showToast("Challenge declined");
+                      } catch (_) {}
+                    }}
+                    data-ocid="dashboard.challenge.cancel_button"
+                  >
+                    ✕ Decline
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
 
@@ -3703,7 +3900,11 @@ function MatchJoinModal({
         <button
           type="button"
           className="fire-btn"
-          onClick={join}
+          onClick={() => {
+            vibrate([30]);
+            playClickSound();
+            join();
+          }}
           disabled={
             coins < (isClash ? liveEntryFee : mode.entryFee) ||
             (isClash
@@ -4136,6 +4337,26 @@ function MatchHistoryView({
             {(m.status === "live" || m.status === "waiting") && (
               <div style={{ marginBottom: 8 }}>
                 {m.status === "live" && <LiveTimer startedAt={m.startedAt} />}
+                {m.status === "waiting" && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: "0.82rem",
+                      color: "#818cf8",
+                    }}
+                  >
+                    <span
+                      className="pulse-dot"
+                      style={{
+                        background: "#818cf8",
+                        boxShadow: "0 0 4px #818cf8",
+                      }}
+                    />
+                    ⏳ Waiting for match to start...
+                  </div>
+                )}
                 {
                   <div
                     style={{
@@ -4212,6 +4433,13 @@ function MatchHistoryView({
                 <X size={14} /> Cancel Match
               </button>
             )}
+            {/* Match Lobby Chat */}
+            {(m.status === "waiting" || m.status === "live") && (
+              <MatchLobbyChat
+                matchId={(m as any).roomRef || m.id}
+                currentUser={currentUser}
+              />
+            )}
           </div>
         ))
       )}
@@ -4226,6 +4454,13 @@ function LeaderboardView({
   setIsLoading,
 }: { currentUser: string; setIsLoading: (v: boolean) => void }) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [leaderPeriod, setLeaderPeriod] = useState<
+    "all" | "weekly" | "monthly"
+  >("all");
+  const [periodicEntries, setPeriodicEntries] = useState<LeaderboardEntry[]>(
+    [],
+  );
 
   useEffect(() => {
     (async () => {
@@ -4242,17 +4477,230 @@ function LeaderboardView({
           };
         });
         all.sort((a, b) => b.coins - a.coins);
-        setEntries(all.slice(0, 20));
+        setEntries(all);
       } finally {
         setIsLoading(false);
       }
     })();
   }, [setIsLoading]);
 
-  const rankClass = (i: number) =>
-    i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+  // Load periodic (weekly/monthly) entries from match data
+  useEffect(() => {
+    if (leaderPeriod === "all") return;
+    (async () => {
+      setIsLoading(true);
+      try {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - (leaderPeriod === "weekly" ? 7 : 30));
+        const matchSnap = await getDocs(
+          query(collection(db, "matches"), where("status", "==", "completed")),
+        );
+        const winCounts: Record<string, number> = {};
+        const nameMap: Record<string, string> = {};
+        for (const d of matchSnap.docs) {
+          const data = d.data();
+          const ts = data.timestamp;
+          if (!ts) continue;
+          const ms: number =
+            typeof ts === "number"
+              ? ts
+              : ts?.seconds
+                ? ts.seconds * 1000
+                : ts?.toMillis
+                  ? (ts as { toMillis: () => number }).toMillis()
+                  : 0;
+          if (ms < cutoff.getTime()) continue;
+          if (data.winner && typeof data.winner === "string") {
+            const uid = data.winner.split(" ")[0];
+            winCounts[uid] = (winCounts[uid] || 0) + 1;
+            if (!nameMap[uid]) nameMap[uid] = uid;
+          }
+          if (data.player) {
+            if (!nameMap[data.player]) nameMap[data.player] = data.player;
+          }
+        }
+        const periodic = Object.entries(winCounts)
+          .map(([uid, wins]) => ({
+            uid,
+            displayName: nameMap[uid] || uid,
+            wins,
+            coins: 0,
+          }))
+          .sort((a, b) => b.wins - a.wins);
+        setPeriodicEntries(periodic);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [leaderPeriod, setIsLoading]);
+
+  const activeEntries = leaderPeriod === "all" ? entries : periodicEntries;
+
+  const filteredEntries = searchQuery.trim()
+    ? activeEntries.filter(
+        (e) =>
+          e.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.uid.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : activeEntries;
+
   const rankEmoji = (i: number) =>
-    i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1);
+    i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
+
+  const rankBg = (i: number) => {
+    if (i === 0) return "linear-gradient(135deg,#ffd700,#ff9500)";
+    if (i === 1) return "linear-gradient(135deg,#c0c0c0,#a0a0a0)";
+    if (i === 2) return "linear-gradient(135deg,#cd7f32,#a0522d)";
+    return "rgba(255,107,0,0.12)";
+  };
+  const rankColor = (i: number) => (i <= 2 ? "#000" : "#ff6b00");
+
+  const PlayerRow = ({
+    e,
+    i,
+    highlight,
+  }: {
+    e: LeaderboardEntry;
+    i: number;
+    highlight?: boolean;
+  }) => (
+    <div
+      key={e.uid}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 14px",
+        borderRadius: 10,
+        background:
+          e.uid === currentUser
+            ? "rgba(255,107,0,0.08)"
+            : highlight
+              ? "rgba(255,215,0,0.05)"
+              : "rgba(255,255,255,0.03)",
+        border:
+          e.uid === currentUser
+            ? "1px solid rgba(255,107,0,0.35)"
+            : "1px solid rgba(255,255,255,0.06)",
+        marginBottom: 6,
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: rankBg(i),
+          color: rankColor(i),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "Orbitron,sans-serif",
+          fontSize: i <= 2 ? "1rem" : "0.72rem",
+          fontWeight: 700,
+          flexShrink: 0,
+        }}
+      >
+        {rankEmoji(i)}
+      </div>
+      <div
+        className="avatar-circle"
+        style={{ width: 34, height: 34, fontSize: "0.8rem" }}
+      >
+        {(e.displayName || e.uid)[0].toUpperCase()}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "0.88rem",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {e.displayName || e.uid}
+          {e.uid === currentUser && (
+            <span
+              style={{
+                color: "var(--accent)",
+                fontSize: "0.68rem",
+                marginLeft: 5,
+              }}
+            >
+              (You)
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            flexWrap: "wrap",
+            marginTop: 2,
+          }}
+        >
+          <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>
+            {e.wins} wins
+          </span>
+          {e.wins >= 10 && (
+            <span
+              style={{
+                background: "rgba(255,107,0,0.15)",
+                color: "#ff6b00",
+                borderRadius: 20,
+                padding: "1px 5px",
+                fontSize: "0.6rem",
+                fontWeight: 700,
+              }}
+            >
+              🏆 Legend
+            </span>
+          )}
+          {e.wins >= 1 && e.wins < 10 && (
+            <span
+              style={{
+                background: "rgba(255,215,0,0.12)",
+                color: "#ffd700",
+                borderRadius: 20,
+                padding: "1px 5px",
+                fontSize: "0.6rem",
+                fontWeight: 700,
+              }}
+            >
+              🥇 Winner
+            </span>
+          )}
+          {e.coins >= 500 && (
+            <span
+              style={{
+                background: "rgba(129,140,248,0.12)",
+                color: "#818cf8",
+                borderRadius: 20,
+                padding: "1px 5px",
+                fontSize: "0.6rem",
+                fontWeight: 700,
+              }}
+            >
+              💎 Rich
+            </span>
+          )}
+        </div>
+      </div>
+      <div
+        style={{
+          fontFamily: "Orbitron,sans-serif",
+          fontWeight: 700,
+          color: "#ff6b00",
+          fontSize: "0.88rem",
+          flexShrink: 0,
+        }}
+      >
+        ₹{e.coins}
+      </div>
+    </div>
+  );
 
   return (
     <motion.div
@@ -4263,57 +4711,168 @@ function LeaderboardView({
       data-ocid="leaderboard.section"
     >
       <h2 className="view-title">🏆 Leaderboard</h2>
-      {entries.length === 0 ? (
+      {/* Period tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(
+          [
+            { id: "all", label: "All Time" },
+            { id: "weekly", label: "This Week" },
+            { id: "monthly", label: "This Month" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setLeaderPeriod(t.id)}
+            data-ocid={`leaderboard.${t.id}.tab`}
+            style={{
+              padding: "5px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--border-color)",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              background:
+                leaderPeriod === t.id ? "var(--accent)" : "transparent",
+              color: leaderPeriod === t.id ? "white" : "var(--muted)",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <input
+        className="fire-input"
+        placeholder="🔍 Search player by name or UID..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{ marginBottom: 14 }}
+        data-ocid="leaderboard.search_input"
+      />
+
+      {filteredEntries.length === 0 ? (
         <div className="empty-state" data-ocid="leaderboard.empty_state">
           <div className="empty-state-icon">🏆</div>
           <div>No players yet. Be the first!</div>
         </div>
       ) : (
-        <div>
-          {entries.map((e, i) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* ── TOP 1 ── */}
+          <div
+            style={{
+              background:
+                "linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,107,0,0.06))",
+              border: "2px solid rgba(255,215,0,0.45)",
+              borderRadius: 16,
+              padding: "16px 14px 12px",
+            }}
+          >
             <div
-              key={e.uid}
-              className={`leaderboard-row ${e.uid === currentUser ? "current" : ""}`}
-              data-ocid={`leaderboard.item.${i + 1}`}
+              style={{
+                fontFamily: "Orbitron,sans-serif",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                color: "#ffd700",
+                letterSpacing: 1.5,
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              <div className={`rank-badge ${rankClass(i)}`}>{rankEmoji(i)}</div>
-              <div
-                className="avatar-circle"
-                style={{ width: 36, height: 36, fontSize: "0.85rem" }}
-              >
-                {(e.displayName || e.uid)[0].toUpperCase()}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
-                  {e.displayName || e.uid}
-                  {e.uid === currentUser && (
-                    <span
-                      style={{
-                        color: "var(--accent)",
-                        fontSize: "0.7rem",
-                        marginLeft: 6,
-                      }}
-                    >
-                      (You)
-                    </span>
-                  )}
-                </div>
-                <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
-                  {e.wins} wins
-                </div>
-              </div>
-              <div
-                style={{
-                  fontFamily: "Orbitron, sans-serif",
-                  fontWeight: 700,
-                  color: "var(--accent)",
-                  fontSize: "0.9rem",
-                }}
-              >
-                ₹{e.coins}
-              </div>
+              👑 TOP 1 — CHAMPION
             </div>
-          ))}
+            {filteredEntries[0] && (
+              <PlayerRow e={filteredEntries[0]} i={0} highlight />
+            )}
+          </div>
+
+          {/* ── TOP 5 ── */}
+          <div
+            style={{
+              background: "rgba(255,107,0,0.06)",
+              border: "1.5px solid rgba(255,107,0,0.35)",
+              borderRadius: 16,
+              padding: "16px 14px 10px",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "Orbitron,sans-serif",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                color: "#ff6b00",
+                letterSpacing: 1.5,
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              🔥 TOP 5 — ELITE
+            </div>
+            {filteredEntries.slice(0, 5).map((e, i) => (
+              <PlayerRow key={e.uid} e={e} i={i} />
+            ))}
+          </div>
+
+          {/* ── TOP 10 ── */}
+          <div
+            style={{
+              background: "rgba(192,192,192,0.05)",
+              border: "1.5px solid rgba(192,192,192,0.22)",
+              borderRadius: 16,
+              padding: "16px 14px 10px",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "Orbitron,sans-serif",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                color: "#c0c0c0",
+                letterSpacing: 1.5,
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              ⚡ TOP 10 — LEGENDS
+            </div>
+            {filteredEntries.slice(0, 10).map((e, i) => (
+              <PlayerRow key={e.uid} e={e} i={i} />
+            ))}
+          </div>
+
+          {/* ── ALL USERS ── */}
+          <div
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              padding: "16px 14px 10px",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "Orbitron,sans-serif",
+                fontWeight: 800,
+                fontSize: "0.82rem",
+                color: "rgba(255,255,255,0.6)",
+                letterSpacing: 1.5,
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              📋 ALL PLAYERS — {filteredEntries.length} TOTAL
+            </div>
+            {filteredEntries.map((e, i) => (
+              <PlayerRow key={e.uid} e={e} i={i} />
+            ))}
+          </div>
         </div>
       )}
       <Footer />
@@ -4412,16 +4971,70 @@ function NotificationsView({
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 function ProfileView({
+  currentUser,
   userData,
   coins,
   setView,
   logout,
 }: {
+  currentUser: string;
   userData: UserData;
   coins: number;
   setView: (v: View) => void;
   logout: () => void;
 }) {
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [challengeUid, setChallengeUid] = useState("");
+  const [challengeMode, setChallengeMode] = useState(GAME_MODES[0].id);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = query(
+          collection(db, "withdraw"),
+          where("user", "==", userData.uid),
+          where("status", "==", "Approved"),
+        );
+        const snap = await getDocs(q);
+        const total = snap.docs.reduce(
+          (sum, d) => sum + (d.data().final || d.data().amount || 0),
+          0,
+        );
+        setTotalEarnings(total);
+      } catch (_) {
+        /* ignore */
+      }
+    })();
+  }, [userData.uid]);
+
+  const sendChallenge = async () => {
+    if (!challengeUid.trim()) return;
+    if (challengeUid.trim() === currentUser) {
+      return;
+    }
+    try {
+      await addDoc(collection(db, "challenges"), {
+        from: currentUser,
+        to: challengeUid.trim(),
+        mode: challengeMode,
+        status: "pending",
+        timestamp: new Date(),
+      });
+      await addDoc(collection(db, "notifications"), {
+        uid: challengeUid.trim(),
+        title: "⚔️ You got a challenge!",
+        message: `${userData.displayName || currentUser} challenged you to a ${GAME_MODES.find((m) => m.id === challengeMode)?.label || challengeMode} match!`,
+        read: false,
+        timestamp: new Date(),
+      });
+      setShowChallengeModal(false);
+      setChallengeUid("");
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -4453,17 +5066,187 @@ function ProfileView({
 
       <div className="stat-grid" style={{ marginBottom: 16 }}>
         {[
-          { value: coins, label: "Coins" },
+          { value: `₹${coins}`, label: "Coins" },
           { value: userData.wins, label: "Wins" },
           { value: userData.kills, label: "Kills" },
           { value: userData.matchesPlayed, label: "Matches" },
+          {
+            value: (
+              userData.kills / Math.max(userData.matchesPlayed, 1)
+            ).toFixed(2),
+            label: "KDR",
+          },
+          {
+            value: `${Math.round((userData.wins / Math.max(userData.matchesPlayed, 1)) * 100)}%`,
+            label: "Win Rate",
+          },
+          { value: `₹${totalEarnings}`, label: "Earned" },
         ].map((s) => (
           <div key={s.label} className="stat-box">
-            <div className="stat-value">₹{s.value}</div>
+            <div className="stat-value">{s.value}</div>
             <div className="stat-label">{s.label}</div>
           </div>
         ))}
       </div>
+
+      {/* Achievement Badges */}
+      {(() => {
+        const badges: { icon: string; label: string; color: string }[] = [];
+        if (userData.wins >= 1)
+          badges.push({ icon: "🥇", label: "First Win", color: "#ffd700" });
+        if (userData.kills >= 50)
+          badges.push({ icon: "💀", label: "Kill Master", color: "#ef4444" });
+        if (userData.wins >= 10)
+          badges.push({ icon: "🏆", label: "Legend", color: "#ff6b00" });
+        if (coins >= 500)
+          badges.push({ icon: "💎", label: "Rich Player", color: "#818cf8" });
+        if (userData.matchesPlayed >= 20)
+          badges.push({ icon: "⚔️", label: "Veteran", color: "#22c55e" });
+        if (badges.length === 0) return null;
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div className="section-label">🏅 Achievements</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {badges.map((b) => (
+                <span
+                  key={b.label}
+                  style={{
+                    background: `${b.color}22`,
+                    border: `1px solid ${b.color}66`,
+                    color: b.color,
+                    borderRadius: 20,
+                    padding: "4px 10px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    fontFamily: "Rajdhani, sans-serif",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {b.icon} {b.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Referral Section */}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="section-label">🔗 Referral Program</div>
+        <div
+          style={{
+            fontSize: "0.78rem",
+            color: "var(--muted)",
+            marginBottom: 8,
+          }}
+        >
+          Share your referral link. Friends who join get 10 coins bonus, and so
+          do you!
+        </div>
+        <div
+          style={{
+            background: "rgba(255,107,0,0.08)",
+            border: "1px solid rgba(255,107,0,0.3)",
+            borderRadius: 8,
+            padding: "8px 12px",
+            marginBottom: 8,
+            fontFamily: "Orbitron, sans-serif",
+            fontSize: "0.75rem",
+            color: "#ff9a00",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Code: {userData.uid}
+        </div>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => {
+            const link = `${window.location.origin}?ref=${userData.uid}`;
+            navigator.clipboard.writeText(link);
+          }}
+          data-ocid="profile.referral.button"
+        >
+          📋 Copy Referral Link
+        </button>
+      </div>
+
+      {/* Challenge Modal */}
+      {showChallengeModal && (
+        <motion.div
+          className="modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowChallengeModal(false)}
+          data-ocid="profile.challenge.modal"
+        >
+          <motion.div
+            className="modal-sheet"
+            initial={{ y: 200 }}
+            animate={{ y: 0 }}
+            exit={{ y: 200 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "1.1rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+                textAlign: "center",
+                marginBottom: 16,
+              }}
+            >
+              ⚔️ Challenge a Player
+            </div>
+            <div className="field-group" style={{ marginBottom: 12 }}>
+              <div className="field-label">Opponent UID</div>
+              <input
+                className="fire-input"
+                placeholder="Enter player UID"
+                value={challengeUid}
+                onChange={(e) => setChallengeUid(e.target.value)}
+                data-ocid="profile.challenge.input"
+              />
+            </div>
+            <div className="field-group" style={{ marginBottom: 16 }}>
+              <div className="field-label">Select Mode</div>
+              <select
+                className="fire-input"
+                value={challengeMode}
+                onChange={(e) => setChallengeMode(e.target.value)}
+                data-ocid="profile.challenge.select"
+              >
+                {GAME_MODES.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.emoji} {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              className="fire-btn"
+              onClick={sendChallenge}
+              data-ocid="profile.challenge.submit_button"
+            >
+              ⚔️ Send Challenge
+            </button>
+            <button
+              type="button"
+              className="fire-btn fire-btn-secondary"
+              style={{ marginTop: 8 }}
+              onClick={() => setShowChallengeModal(false)}
+              data-ocid="profile.challenge.cancel_button"
+            >
+              Cancel
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
@@ -4482,6 +5265,30 @@ function ProfileView({
           >
             <Edit3 size={16} /> Edit Profile
           </span>
+        </button>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setShowChallengeModal(true)}
+          data-ocid="profile.challenge_button"
+        >
+          ⚔️ Challenge a Player
+        </button>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setView("clans")}
+          data-ocid="profile.clans_button"
+        >
+          🛡️ Clans
+        </button>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={() => setView("rules")}
+          data-ocid="profile.rules_button"
+        >
+          📋 Rules & Regulations
         </button>
         <button
           type="button"
@@ -4655,27 +5462,39 @@ function DepositHistoryView({
 }) {
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [depositFilter, setDepositFilter] = useState<
+    "All" | "Pending" | "Approved" | "Rejected"
+  >("All");
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      try {
-        const q = query(
-          collection(db, "payments"),
-          where("user", "==", currentUser),
-        );
-        const snap = await getDocs(q);
+    setIsLoading(true);
+    const q = query(
+      collection(db, "payments"),
+      where("user", "==", currentUser),
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
         setPayments(
           snap.docs
             .map((d) => ({ id: d.id, ...d.data() }) as PaymentData)
             .reverse(),
         );
         setLoaded(true);
-      } finally {
         setIsLoading(false);
-      }
-    })();
+      },
+      () => {
+        setIsLoading(false);
+        setLoaded(true);
+      },
+    );
+    return () => unsub();
   }, [currentUser, setIsLoading]);
+
+  const filteredDeposits =
+    depositFilter === "All"
+      ? payments
+      : payments.filter((p) => p.status === depositFilter);
 
   const badgeClass = (s: string) =>
     s === "Approved"
@@ -4701,13 +5520,41 @@ function DepositHistoryView({
         <ArrowLeft size={16} /> Back
       </button>
       <h2 className="view-title">💸 Deposit History</h2>
-      {loaded && payments.length === 0 ? (
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}
+      >
+        {(["All", "Pending", "Approved", "Rejected"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setDepositFilter(f)}
+            data-ocid={`deposit.${f.toLowerCase()}.tab`}
+            style={{
+              padding: "4px 12px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              background:
+                depositFilter === f ? "var(--accent)" : "var(--card-bg)",
+              color: depositFilter === f ? "white" : "var(--muted)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            {f} (
+            {f === "All"
+              ? payments.length
+              : payments.filter((p) => p.status === f).length}
+            )
+          </button>
+        ))}
+      </div>
+      {loaded && filteredDeposits.length === 0 ? (
         <div className="empty-state" data-ocid="deposit.empty_state">
           <div className="empty-state-icon">💸</div>
           <div>No deposits yet</div>
         </div>
       ) : (
-        payments.map((p, i) => (
+        filteredDeposits.map((p, i) => (
           <div
             key={p.id}
             className="list-item flex-between"
@@ -4719,6 +5566,28 @@ function DepositHistoryView({
               </div>
               <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
                 UTR: {p.utr}
+                {p.status === "Pending" && (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
+                      color: "#eab308",
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      className="pulse-dot"
+                      style={{
+                        background: "#eab308",
+                        boxShadow: "0 0 4px #eab308",
+                      }}
+                    />
+                    LIVE
+                  </span>
+                )}
               </div>
             </div>
             <span className={`badge ${badgeClass(p.status)}`}>{p.status}</span>
@@ -4742,27 +5611,39 @@ function WithdrawHistoryView({
 }) {
   const [withdraws, setWithdraws] = useState<WithdrawData[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [withdrawFilter, setWithdrawFilter] = useState<
+    "All" | "Pending" | "Approved" | "Rejected"
+  >("All");
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      try {
-        const q = query(
-          collection(db, "withdraw"),
-          where("user", "==", currentUser),
-        );
-        const snap = await getDocs(q);
+    setIsLoading(true);
+    const q = query(
+      collection(db, "withdraw"),
+      where("user", "==", currentUser),
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
         setWithdraws(
           snap.docs
             .map((d) => ({ id: d.id, ...d.data() }) as WithdrawData)
             .reverse(),
         );
         setLoaded(true);
-      } finally {
         setIsLoading(false);
-      }
-    })();
+      },
+      () => {
+        setIsLoading(false);
+        setLoaded(true);
+      },
+    );
+    return () => unsub();
   }, [currentUser, setIsLoading]);
+
+  const filteredWithdraws =
+    withdrawFilter === "All"
+      ? withdraws
+      : withdraws.filter((w) => w.status === withdrawFilter);
 
   const badgeClass = (s: string) =>
     s === "Approved"
@@ -4788,13 +5669,41 @@ function WithdrawHistoryView({
         <ArrowLeft size={16} /> Back
       </button>
       <h2 className="view-title">💰 Withdraw History</h2>
-      {loaded && withdraws.length === 0 ? (
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}
+      >
+        {(["All", "Pending", "Approved", "Rejected"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setWithdrawFilter(f)}
+            data-ocid={`withdraw.${f.toLowerCase()}.tab`}
+            style={{
+              padding: "4px 12px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              background:
+                withdrawFilter === f ? "var(--accent)" : "var(--card-bg)",
+              color: withdrawFilter === f ? "white" : "var(--muted)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            {f} (
+            {f === "All"
+              ? withdraws.length
+              : withdraws.filter((w) => w.status === f).length}
+            )
+          </button>
+        ))}
+      </div>
+      {loaded && filteredWithdraws.length === 0 ? (
         <div className="empty-state" data-ocid="withdraw.empty_state">
           <div className="empty-state-icon">💰</div>
           <div>No withdrawals yet</div>
         </div>
       ) : (
-        withdraws.map((w, i) => (
+        filteredWithdraws.map((w, i) => (
           <div
             key={w.id}
             className="list-item flex-between"
@@ -4806,6 +5715,28 @@ function WithdrawHistoryView({
               </div>
               <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
                 After 9% fee
+                {w.status === "Pending" && (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
+                      color: "#eab308",
+                      fontSize: "0.68rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      className="pulse-dot"
+                      style={{
+                        background: "#eab308",
+                        boxShadow: "0 0 4px #eab308",
+                      }}
+                    />
+                    LIVE
+                  </span>
+                )}
               </div>
             </div>
             <span className={`badge ${badgeClass(w.status)}`}>{w.status}</span>
@@ -5086,6 +6017,176 @@ function ReportProblemView({
   );
 }
 
+// ─── Match Lobby Chat ──────────────────────────────────────────────────────
+function MatchLobbyChat({
+  matchId,
+  currentUser,
+}: { matchId: string; currentUser: string }) {
+  const [messages, setMessages] = useState<
+    {
+      id: string;
+      uid: string;
+      sender: string;
+      message: string;
+      timestamp: unknown;
+    }[]
+  >([]);
+  const [chatInput, setChatInput] = useState("");
+  const [showChat, setShowChat] = useState(false);
+
+  useEffect(() => {
+    if (!showChat) return;
+    const q = query(
+      collection(db, "matchChats", matchId, "messages"),
+      orderBy("timestamp", "asc"),
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any));
+    });
+    return () => unsub();
+  }, [matchId, showChat]);
+
+  const sendChatMsg = async () => {
+    if (!chatInput.trim()) return;
+    vibrate([20]);
+    try {
+      await addDoc(collection(db, "matchChats", matchId, "messages"), {
+        uid: currentUser,
+        sender: currentUser,
+        message: chatInput.trim(),
+        timestamp: new Date(),
+      });
+      setChatInput("");
+    } catch (_) {}
+  };
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        onClick={() => setShowChat(!showChat)}
+        style={{
+          background: "none",
+          border: "1px solid rgba(255,107,0,0.3)",
+          borderRadius: 8,
+          padding: "5px 10px",
+          color: "var(--muted)",
+          fontSize: "0.72rem",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+        }}
+        data-ocid="matches.chat.toggle"
+      >
+        <MessageSquare size={12} />
+        {showChat ? "Hide" : "Show"} Lobby Chat
+      </button>
+      {showChat && (
+        <div
+          style={{
+            marginTop: 8,
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,107,0,0.2)",
+            borderRadius: 10,
+            padding: "10px",
+            maxHeight: 180,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ flex: 1, overflowY: "auto", marginBottom: 8 }}>
+            {messages.length === 0 ? (
+              <div
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "0.72rem",
+                  textAlign: "center",
+                  padding: "8px 0",
+                }}
+              >
+                No messages yet. Say hi! 👋
+              </div>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      m.uid === currentUser ? "flex-end" : "flex-start",
+                    marginBottom: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "75%",
+                      background:
+                        m.uid === currentUser
+                          ? "rgba(255,107,0,0.2)"
+                          : "rgba(255,255,255,0.06)",
+                      border:
+                        m.uid === currentUser
+                          ? "1px solid rgba(255,107,0,0.4)"
+                          : "1px solid rgba(255,255,255,0.1)",
+                      borderRadius:
+                        m.uid === currentUser
+                          ? "10px 10px 2px 10px"
+                          : "10px 10px 10px 2px",
+                      padding: "5px 9px",
+                      fontSize: "0.75rem",
+                      color: "var(--text)",
+                    }}
+                  >
+                    {m.uid !== currentUser && (
+                      <div
+                        style={{
+                          color: "#ff9a00",
+                          fontSize: "0.62rem",
+                          fontWeight: 700,
+                          marginBottom: 1,
+                        }}
+                      >
+                        {m.uid}
+                      </div>
+                    )}
+                    {m.message}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              className="fire-input"
+              placeholder="Type message..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendChatMsg()}
+              style={{ flex: 1, padding: "6px 10px", fontSize: "0.78rem" }}
+              data-ocid="matches.chat.input"
+            />
+            <button
+              type="button"
+              className="fire-btn"
+              style={{
+                width: "auto",
+                padding: "6px 12px",
+                fontSize: "0.72rem",
+              }}
+              onClick={sendChatMsg}
+              data-ocid="matches.chat.submit_button"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Live Timer ───────────────────────────────────────────────────────────────
 function LiveTimer({ startedAt }: { startedAt?: number }) {
   const [elapsed, setElapsed] = useState(0);
@@ -5130,6 +6231,475 @@ function LiveTimer({ startedAt }: { startedAt?: number }) {
     >
       <span className="pulse-dot" />🕐 Room Live: {mins}m {secs}s ago
     </div>
+  );
+}
+
+// ─── Clan View ───────────────────────────────────────────────────────────────
+function ClanView({
+  currentUser,
+  userData,
+  setUserData,
+  setView,
+  setIsLoading,
+  showToast,
+}: {
+  currentUser: string;
+  userData: UserData;
+  setUserData: (d: UserData) => void;
+  setView: (v: View) => void;
+  setIsLoading: (v: boolean) => void;
+  showToast: (msg: string, type?: "success" | "error") => void;
+}) {
+  const [clanData, setClanData] = useState<{
+    id: string;
+    name: string;
+    leader: string;
+    members: string[];
+  } | null>(null);
+  const [clanName, setClanName] = useState("");
+  const [joinClanId, setJoinClanId] = useState("");
+  const [memberDetails, setMemberDetails] = useState<
+    { uid: string; displayName: string; wins: number; kills: number }[]
+  >([]);
+
+  const loadClan = useCallback(async () => {
+    if (!userData.clanId) return;
+    try {
+      const snap = await getDoc(doc(db, "clans", userData.clanId));
+      if (snap.exists()) {
+        const data = { id: snap.id, ...snap.data() } as {
+          id: string;
+          name: string;
+          leader: string;
+          members: string[];
+        };
+        setClanData(data);
+        // Load member details
+        const details = await Promise.all(
+          (data.members || []).map(async (uid: string) => {
+            try {
+              const uSnap = await getDoc(doc(db, "users", uid));
+              if (uSnap.exists()) {
+                const u = uSnap.data();
+                return {
+                  uid,
+                  displayName: u.displayName || uid,
+                  wins: u.wins || 0,
+                  kills: u.kills || 0,
+                };
+              }
+              return { uid, displayName: uid, wins: 0, kills: 0 };
+            } catch (_) {
+              return { uid, displayName: uid, wins: 0, kills: 0 };
+            }
+          }),
+        );
+        setMemberDetails(details);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }, [userData.clanId]);
+
+  useEffect(() => {
+    loadClan();
+  }, [loadClan]);
+
+  const createClan = async () => {
+    if (!clanName.trim()) {
+      showToast("Enter clan name", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const clanId = `clan_${currentUser}_${Date.now()}`;
+      await setDoc(doc(db, "clans", clanId), {
+        name: clanName.trim(),
+        leader: currentUser,
+        members: [currentUser],
+        createdAt: new Date(),
+      });
+      await updateDoc(doc(db, "users", currentUser), { clanId });
+      setUserData({ ...userData, clanId });
+      showToast(`Clan "${clanName.trim()}" created!`);
+      setClanName("");
+      loadClan();
+    } catch (_err) {
+      showToast("Failed to create clan", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const joinClan = async () => {
+    if (!joinClanId.trim()) {
+      showToast("Enter clan ID", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const cSnap = await getDoc(doc(db, "clans", joinClanId.trim()));
+      if (!cSnap.exists()) {
+        showToast("Clan not found", "error");
+        return;
+      }
+      const members: string[] = cSnap.data().members || [];
+      if (members.includes(currentUser)) {
+        showToast("Already in this clan", "error");
+        return;
+      }
+      await updateDoc(doc(db, "clans", joinClanId.trim()), {
+        members: [...members, currentUser],
+      });
+      await updateDoc(doc(db, "users", currentUser), {
+        clanId: joinClanId.trim(),
+      });
+      setUserData({ ...userData, clanId: joinClanId.trim() });
+      showToast("Joined clan!");
+      setJoinClanId("");
+      loadClan();
+    } catch (_) {
+      showToast("Failed to join clan", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const leaveClan = async () => {
+    if (!userData.clanId || !clanData) return;
+    setIsLoading(true);
+    try {
+      const updatedMembers = (clanData.members || []).filter(
+        (m: string) => m !== currentUser,
+      );
+      await updateDoc(doc(db, "clans", userData.clanId), {
+        members: updatedMembers,
+      });
+      await updateDoc(doc(db, "users", currentUser), { clanId: "" });
+      setUserData({ ...userData, clanId: "" });
+      setClanData(null);
+      setMemberDetails([]);
+      showToast("Left clan");
+    } catch (_) {
+      showToast("Failed to leave clan", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="main-content"
+      data-ocid="clans.section"
+    >
+      <button
+        type="button"
+        className="back-btn"
+        onClick={() => setView("profile")}
+        data-ocid="clans.back.button"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
+      <h2 className="view-title">🛡️ Clans</h2>
+
+      {!userData.clanId ? (
+        <>
+          <div className="card" style={{ marginBottom: 12 }}>
+            <div className="section-label">➕ Create Clan</div>
+            <div className="field-group" style={{ marginBottom: 10 }}>
+              <div className="field-label">Clan Name</div>
+              <input
+                className="fire-input"
+                placeholder="Enter clan name..."
+                value={clanName}
+                onChange={(e) => setClanName(e.target.value)}
+                data-ocid="clans.create.input"
+              />
+            </div>
+            <button
+              type="button"
+              className="fire-btn"
+              onClick={createClan}
+              data-ocid="clans.create.submit_button"
+            >
+              🛡️ Create Clan
+            </button>
+          </div>
+          <div className="card">
+            <div className="section-label">🔗 Join Existing Clan</div>
+            <div className="field-group" style={{ marginBottom: 10 }}>
+              <div className="field-label">Clan ID</div>
+              <input
+                className="fire-input"
+                placeholder="Enter clan ID..."
+                value={joinClanId}
+                onChange={(e) => setJoinClanId(e.target.value)}
+                data-ocid="clans.join.input"
+              />
+            </div>
+            <button
+              type="button"
+              className="fire-btn fire-btn-secondary"
+              onClick={joinClan}
+              data-ocid="clans.join.submit_button"
+            >
+              🔗 Join Clan
+            </button>
+          </div>
+        </>
+      ) : (
+        <div>
+          {clanData && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 12,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "Orbitron, sans-serif",
+                      fontSize: "1.1rem",
+                      fontWeight: 900,
+                      color: "var(--accent)",
+                    }}
+                  >
+                    🛡️ {clanData.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "var(--muted)",
+                      marginTop: 4,
+                    }}
+                  >
+                    ID: {clanData.id}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "#ff9a00",
+                      marginTop: 2,
+                    }}
+                  >
+                    Leader: {clanData.leader}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(clanData.id);
+                    showToast("Clan ID copied!");
+                  }}
+                  style={{
+                    background: "rgba(255,107,0,0.12)",
+                    border: "1px solid rgba(255,107,0,0.3)",
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                    color: "#ff9a00",
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  📋 Copy ID
+                </button>
+              </div>
+              <div className="section-label">
+                👥 Members ({memberDetails.length})
+              </div>
+              {memberDetails.map((m, i) => (
+                <div
+                  key={m.uid}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                  data-ocid={`clans.member.item.${i + 1}`}
+                >
+                  <div
+                    className="avatar-circle"
+                    style={{ width: 32, height: 32, fontSize: "0.75rem" }}
+                  >
+                    {(m.displayName || m.uid)[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: "0.85rem",
+                        fontWeight: 700,
+                        color:
+                          m.uid === clanData.leader ? "#ffd700" : "var(--text)",
+                      }}
+                    >
+                      {m.uid === clanData.leader ? "👑 " : ""}
+                      {m.displayName}
+                    </div>
+                    <div style={{ fontSize: "0.68rem", color: "var(--muted)" }}>
+                      {m.wins} wins • {m.kills} kills
+                    </div>
+                  </div>
+                  {m.uid === currentUser && (
+                    <span
+                      style={{
+                        fontSize: "0.65rem",
+                        color: "var(--accent)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      (You)
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="fire-btn fire-btn-danger"
+            onClick={leaveClan}
+            data-ocid="clans.leave.delete_button"
+          >
+            🚪 Leave Clan
+          </button>
+        </div>
+      )}
+      <Footer />
+    </motion.div>
+  );
+}
+
+// ─── Rules View ───────────────────────────────────────────────────────────────
+function RulesView({ setView }: { setView: (v: View) => void }) {
+  const rules = [
+    "All players must join the custom room before match start time. Late entries are not allowed.",
+    "Every player must use their own Free Fire account. Account sharing is strictly prohibited.",
+    "Hacks, mods, or any third-party tools are strictly banned. If caught, player will be permanently banned.",
+    "Room ID & Password will be shared 10–15 minutes before match starts.",
+    "Players must follow fair play. Any kind of teaming in solo matches is not allowed.",
+    "Internet connection issues or device lag are player's responsibility. No rematch will be provided.",
+    "Players should take a screenshot of result (if required) and submit for verification.",
+    "In case of any dispute, admin decision will be final and binding.",
+    "Abusive language, toxic behavior or misconduct will lead to disqualification.",
+    "Prize will be distributed within specified time after result verification.",
+    "Wrong details (UID / UPI) provided by player will not be admin responsibility.",
+    "Only registered players are allowed to participate in the match. No replacements allowed.",
+    "Entry fee once paid is non-refundable under any circumstances.",
+    "Tournament rules may change anytime. Players are requested to check updates regularly.",
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="main-content"
+      data-ocid="rules.section"
+    >
+      <button
+        type="button"
+        className="back-btn"
+        onClick={() => setView("profile")}
+        data-ocid="rules.back.button"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
+      <h2 className="view-title">📋 Rules & Regulations</h2>
+      <div
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,107,0,0.06), rgba(0,0,0,0.4))",
+          border: "1px solid rgba(255,107,0,0.25)",
+          borderRadius: 16,
+          padding: "20px 16px",
+          marginBottom: 16,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "Orbitron, sans-serif",
+            fontSize: "0.75rem",
+            color: "#ff9a00",
+            letterSpacing: "0.1em",
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
+          🎮 FREE FIRE TOURNAMENT — OFFICIAL RULES
+        </div>
+        {rules.map((rule, i) => (
+          <div
+            key={rule.slice(0, 20)}
+            style={{
+              display: "flex",
+              gap: 12,
+              marginBottom: 12,
+              padding: "10px 12px",
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: 10,
+              border: "1px solid rgba(255,107,0,0.12)",
+            }}
+            data-ocid={`rules.item.${i + 1}`}
+          >
+            <div
+              style={{
+                minWidth: 24,
+                height: 24,
+                borderRadius: "50%",
+                background: "rgba(255,107,0,0.2)",
+                border: "1px solid rgba(255,107,0,0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "0.6rem",
+                fontWeight: 700,
+                color: "#ff6b00",
+                flexShrink: 0,
+                marginTop: 2,
+              }}
+            >
+              {i + 1}
+            </div>
+            <div
+              style={{
+                fontSize: "0.82rem",
+                color: "rgba(255,255,255,0.75)",
+                fontFamily: "Rajdhani, sans-serif",
+                lineHeight: 1.5,
+              }}
+            >
+              {rule}
+            </div>
+          </div>
+        ))}
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            background: "rgba(255,107,0,0.08)",
+            borderRadius: 10,
+            fontSize: "0.75rem",
+            color: "#ff9a00",
+            textAlign: "center",
+            fontFamily: "Rajdhani, sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          ⚠️ By joining any match, you agree to all the above rules.
+        </div>
+      </div>
+      <Footer />
+    </motion.div>
   );
 }
 
@@ -5347,17 +6917,27 @@ function AdminDashboardView({
     totalWithdrawals: 0,
     pendingPayments: 0,
     pendingWithdrawals: 0,
+    dailyNewUsers: 0,
+    todayDeposits: 0,
   });
+  const [modeCounts, setModeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
       try {
-        const [usersSnap, paymentsSnap, withdrawsSnap] = await Promise.all([
-          getDocs(collection(db, "users")),
-          getDocs(collection(db, "payments")),
-          getDocs(collection(db, "withdraw")),
-        ]);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayMs = todayStart.getTime();
+
+        const [usersSnap, paymentsSnap, withdrawsSnap, matchSnap] =
+          await Promise.all([
+            getDocs(collection(db, "users")),
+            getDocs(collection(db, "payments")),
+            getDocs(collection(db, "withdraw")),
+            getDocs(collection(db, "matches")),
+          ]);
+
         const totalDeposits = paymentsSnap.docs
           .filter((d) => d.data().status === "Approved")
           .reduce((sum, d) => sum + (d.data().amount || 0), 0);
@@ -5370,6 +6950,48 @@ function AdminDashboardView({
         const pendingWithdrawals = withdrawsSnap.docs.filter(
           (d) => d.data().status === "Pending",
         ).length;
+
+        // Daily new users (created today)
+        const dailyNewUsers = usersSnap.docs.filter((d) => {
+          const ts = d.data().createdAt;
+          if (!ts) return false;
+          const ms: number =
+            typeof ts === "number"
+              ? ts
+              : ts?.seconds
+                ? ts.seconds * 1000
+                : ts?.toMillis
+                  ? (ts as { toMillis: () => number }).toMillis()
+                  : 0;
+          return ms >= todayMs;
+        }).length;
+
+        // Today's deposits (approved, created today)
+        const todayDeposits = paymentsSnap.docs
+          .filter((d) => {
+            if (d.data().status !== "Approved") return false;
+            const ts = d.data().timestamp;
+            if (!ts) return false;
+            const ms: number =
+              typeof ts === "number"
+                ? ts
+                : ts?.seconds
+                  ? ts.seconds * 1000
+                  : ts?.toMillis
+                    ? (ts as { toMillis: () => number }).toMillis()
+                    : 0;
+            return ms >= todayMs;
+          })
+          .reduce((sum, d) => sum + (d.data().amount || 0), 0);
+
+        // Mode counts for dynamic bar chart
+        const modeCountsObj: Record<string, number> = {};
+        for (const d of matchSnap.docs) {
+          const m = d.data().mode;
+          if (m) modeCountsObj[m] = (modeCountsObj[m] || 0) + 1;
+        }
+        setModeCounts(modeCountsObj);
+
         setStats({
           totalUsers: usersSnap.size,
           activeUsers: usersSnap.docs.filter((d) => !d.data().blocked).length,
@@ -5377,6 +6999,8 @@ function AdminDashboardView({
           totalWithdrawals,
           pendingPayments,
           pendingWithdrawals,
+          dailyNewUsers,
+          todayDeposits,
         });
       } finally {
         setIsLoading(false);
@@ -5423,6 +7047,18 @@ function AdminDashboardView({
       value: stats.pendingWithdrawals,
       color: "#f97316",
       icon: "⏳",
+    },
+    {
+      label: "New Today",
+      value: stats.dailyNewUsers,
+      color: "#a78bfa",
+      icon: "🆕",
+    },
+    {
+      label: "Today Deposits",
+      value: `₹${stats.todayDeposits}`,
+      color: "#38bdf8",
+      icon: "📅",
     },
   ];
 
@@ -5488,6 +7124,92 @@ function AdminDashboardView({
           </button>
         ))}
       </div>
+
+      {/* Analytics CSS Bar Chart */}
+      <div className="section-label" style={{ marginTop: 16 }}>
+        📊 Mode Activity Chart
+      </div>
+      <div
+        style={{
+          background: "rgba(255,107,0,0.05)",
+          border: "1px solid rgba(255,107,0,0.2)",
+          borderRadius: 12,
+          padding: "14px 12px",
+        }}
+      >
+        {(() => {
+          const modeLabels = [
+            { id: "1v1", label: "1v1" },
+            { id: "2v2", label: "2v2" },
+            { id: "squad", label: "Squad" },
+            { id: "clash", label: "Clash" },
+            { id: "br-solo", label: "BR Solo" },
+            { id: "br-duo", label: "BR Duo" },
+            { id: "br-squad", label: "BR Squad" },
+            { id: "highstakes", label: "High Stakes" },
+          ];
+          const maxCount = Math.max(
+            1,
+            ...modeLabels.map((m) => modeCounts[m.id] || 0),
+          );
+          return modeLabels.map((bar) => {
+            const cnt = modeCounts[bar.id] || 0;
+            const pct = Math.round((cnt / maxCount) * 100);
+            return (
+              <div
+                key={bar.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: 66,
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    fontFamily: "Rajdhani, sans-serif",
+                  }}
+                >
+                  {bar.label}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 8,
+                    background: "rgba(255,255,255,0.08)",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #ff6b00, #ffaa00)",
+                      borderRadius: 4,
+                      transition: "width 0.8s ease",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    minWidth: 36,
+                    fontSize: "0.68rem",
+                    color: "#ff9a00",
+                    fontFamily: "Orbitron, sans-serif",
+                    textAlign: "right",
+                  }}
+                >
+                  {cnt}
+                </div>
+              </div>
+            );
+          });
+        })()}
+      </div>
     </div>
   );
 }
@@ -5504,12 +7226,35 @@ function AdminUsersView({
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [coinsInput, setCoinsInput] = useState<Record<string, string>>({});
+  const [activeAdminUsersTab, setActiveAdminUsersTab] = useState<
+    "users" | "wallets"
+  >("users");
+  const [walletBalances, setWalletBalances] = useState<
+    { uid: string; displayName: string; coins: number }[]
+  >([]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const snap = await getDocs(collection(db, "users"));
-      setUsers(snap.docs.map((d) => ({ ...d.data() }) as UserData));
+      const [snap, walletSnap] = await Promise.all([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "wallet")),
+      ]);
+      const usersData = snap.docs.map((d) => ({ ...d.data() }) as UserData);
+      setUsers(usersData);
+      // Merge wallet data with user names
+      const wallets = walletSnap.docs
+        .map((d) => {
+          const user = usersData.find((u) => u.uid === d.id);
+          return {
+            uid: d.id,
+            displayName: user?.displayName || d.id,
+            coins: d.data().coins || 0,
+          };
+        })
+        .filter((w) => w.uid !== "admin")
+        .sort((a, b) => b.coins - a.coins);
+      setWalletBalances(wallets);
     } finally {
       setIsLoading(false);
     }
@@ -5567,10 +7312,18 @@ function AdminUsersView({
     }
   };
 
+  const [banReasonInput, setBanReasonInput] = useState<Record<string, string>>(
+    {},
+  );
+
   const toggleBlock = async (u: UserData) => {
     setIsLoading(true);
     try {
-      await updateDoc(doc(db, "users", u.uid), { blocked: !u.blocked });
+      const reason = banReasonInput[u.uid] || "";
+      await updateDoc(doc(db, "users", u.uid), {
+        blocked: !u.blocked,
+        ...(u.blocked ? { banReason: "" } : { banReason: reason }),
+      });
       await logAdminAction(
         `${u.blocked ? "Unblocked" : "Blocked"} user`,
         u.uid,
@@ -5604,180 +7357,352 @@ function AdminUsersView({
     }
   };
 
+  const totalCirculation = walletBalances.reduce((s, w) => s + w.coins, 0);
+
   return (
     <div data-ocid="admin.users.section">
       <h2 className="view-title">👥 Users ({users.length})</h2>
-      <input
-        className="fire-input"
-        placeholder="Search by UID or name..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginBottom: 12 }}
-        data-ocid="admin.users.search_input"
-      />
-      {filtered.map((u, i) => (
-        <div
-          key={u.uid}
-          className="card"
-          style={{ marginBottom: 8 }}
-          data-ocid={`admin.users.item.${i + 1}`}
+      {/* Tab toggle */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        <button
+          type="button"
+          onClick={() => setActiveAdminUsersTab("users")}
+          data-ocid="admin.users.tab"
+          style={{
+            padding: "6px 14px",
+            borderRadius: 8,
+            border: "1px solid var(--border-color)",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            background:
+              activeAdminUsersTab === "users" ? "var(--accent)" : "transparent",
+            color: activeAdminUsersTab === "users" ? "white" : "var(--muted)",
+          }}
         >
+          👥 Users
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveAdminUsersTab("wallets")}
+          data-ocid="admin.wallets.tab"
+          style={{
+            padding: "6px 14px",
+            borderRadius: 8,
+            border: "1px solid var(--border-color)",
+            cursor: "pointer",
+            fontSize: "0.8rem",
+            background:
+              activeAdminUsersTab === "wallets"
+                ? "var(--accent)"
+                : "transparent",
+            color: activeAdminUsersTab === "wallets" ? "white" : "var(--muted)",
+          }}
+        >
+          💰 Wallet Balances
+        </button>
+      </div>
+
+      {activeAdminUsersTab === "wallets" ? (
+        <div>
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 6,
+              background: "rgba(255,107,0,0.08)",
+              border: "1px solid rgba(255,107,0,0.3)",
+              borderRadius: 12,
+              padding: "12px 16px",
+              marginBottom: 14,
+              textAlign: "center",
             }}
           >
-            <div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: "0.9rem",
-                  color: "var(--accent)",
-                }}
-              >
-                {u.uid}
-              </div>
-              <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
-                {u.displayName} | {u.phone}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 6,
-                  marginTop: 4,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span className="badge badge-waiting">💰 {u.coins || 0}</span>
-                {u.blocked && (
-                  <span className="badge badge-rejected">BLOCKED</span>
-                )}
-                {u.phone && phoneCounts[u.phone] > 1 && (
-                  <span
-                    className="badge"
-                    style={{
-                      background: "#ef4444",
-                      color: "white",
-                      fontSize: "0.6rem",
-                    }}
-                  >
-                    ⚠️ Dup Phone
-                  </span>
-                )}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="fire-btn fire-btn-secondary"
-              style={{
-                width: "auto",
-                padding: "4px 10px",
-                fontSize: "0.75rem",
-              }}
-              onClick={() => setExpanded(expanded === u.uid ? null : u.uid)}
-              data-ocid={`admin.users.edit_button.${i + 1}`}
-            >
-              {expanded === u.uid ? (
-                <ChevronUp size={14} />
-              ) : (
-                <ChevronDown size={14} />
-              )}
-            </button>
-          </div>
-          {expanded === u.uid && (
             <div
               style={{
-                borderTop: "1px solid var(--border-color)",
-                paddingTop: 10,
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "0.72rem",
+                color: "#ff9a00",
+                letterSpacing: 1,
+                marginBottom: 4,
               }}
             >
+              💰 TOTAL IN CIRCULATION
+            </div>
+            <div
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "1.4rem",
+                fontWeight: 900,
+                color: "#ff6b00",
+              }}
+            >
+              ₹{totalCirculation}
+            </div>
+          </div>
+          {walletBalances.map((w, i) => (
+            <div
+              key={w.uid}
+              className="list-item flex-between"
+              data-ocid={`admin.wallets.item.${i + 1}`}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    minWidth: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background:
+                      i === 0
+                        ? "linear-gradient(135deg,#ffd700,#ff9500)"
+                        : i === 1
+                          ? "linear-gradient(135deg,#c0c0c0,#a0a0a0)"
+                          : i === 2
+                            ? "linear-gradient(135deg,#cd7f32,#a0522d)"
+                            : "rgba(255,107,0,0.15)",
+                    color: i <= 2 ? "#000" : "#ff6b00",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    fontFamily: "Orbitron, sans-serif",
+                    flexShrink: 0,
+                  }}
+                >
+                  #{i + 1}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                    {w.uid}
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
+                    {w.displayName}
+                  </div>
+                </div>
+              </div>
               <div
                 style={{
-                  color: "var(--muted)",
-                  fontSize: "0.75rem",
-                  marginBottom: 8,
+                  fontFamily: "Orbitron, sans-serif",
+                  fontWeight: 700,
+                  color: "#ff6b00",
+                  fontSize: "0.9rem",
                 }}
               >
-                Wins: {u.wins} | Kills: {u.kills} | Matches: {u.matchesPlayed}
+                ₹{w.coins}
               </div>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input
-                  className="fire-input"
-                  type="number"
-                  placeholder="Coins"
-                  value={coinsInput[u.uid] || ""}
-                  onChange={(e) =>
-                    setCoinsInput((prev) => ({
-                      ...prev,
-                      [u.uid]: e.target.value,
-                    }))
-                  }
-                  style={{ flex: 1 }}
-                  data-ocid={`admin.users.coins.input.${i + 1}`}
-                />
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-success"
-                  style={{
-                    width: "auto",
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                  }}
-                  onClick={() =>
-                    addCoins(u.uid, Number(coinsInput[u.uid] || 0))
-                  }
-                  data-ocid={`admin.users.add.button.${i + 1}`}
-                >
-                  +Add
-                </button>
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-danger"
-                  style={{
-                    width: "auto",
-                    padding: "6px 12px",
-                    fontSize: "0.75rem",
-                  }}
-                  onClick={() =>
-                    removeCoins(u.uid, Number(coinsInput[u.uid] || 0))
-                  }
-                  data-ocid={`admin.users.remove.button.${i + 1}`}
-                >
-                  -Remove
-                </button>
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  type="button"
-                  className={`fire-btn ${u.blocked ? "fire-btn-success" : "fire-btn-warning"}`}
-                  style={{ fontSize: "0.78rem" }}
-                  onClick={() => toggleBlock(u)}
-                  data-ocid={`admin.users.block.toggle.${i + 1}`}
-                >
-                  {u.blocked ? "✅ Unblock" : "🚫 Block"}
-                </button>
-                <button
-                  type="button"
-                  className="fire-btn fire-btn-danger"
-                  style={{ fontSize: "0.78rem" }}
-                  onClick={() => deleteUser(u.uid)}
-                  data-ocid={`admin.users.delete_button.${i + 1}`}
-                >
-                  🗑️ Delete
-                </button>
-              </div>
+            </div>
+          ))}
+          {walletBalances.length === 0 && (
+            <div className="empty-state" data-ocid="admin.wallets.empty_state">
+              <div className="empty-state-icon">💰</div>
+              <div>No wallets found</div>
             </div>
           )}
         </div>
-      ))}
-      {filtered.length === 0 && (
-        <div className="empty-state" data-ocid="admin.users.empty_state">
-          <div className="empty-state-icon">👥</div>
-          <div>No users found</div>
-        </div>
+      ) : (
+        <>
+          <input
+            className="fire-input"
+            placeholder="Search by UID or name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ marginBottom: 12 }}
+            data-ocid="admin.users.search_input"
+          />
+          {filtered.map((u, i) => (
+            <div
+              key={u.uid}
+              className="card"
+              style={{ marginBottom: 8 }}
+              data-ocid={`admin.users.item.${i + 1}`}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 6,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {u.uid}
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: "0.78rem" }}>
+                    {u.displayName}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      marginTop: 4,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span className="badge badge-waiting">
+                      💰 {u.coins || 0}
+                    </span>
+                    {u.blocked && (
+                      <span className="badge badge-rejected">BLOCKED</span>
+                    )}
+                    {u.phone && phoneCounts[u.phone] > 1 && (
+                      <span
+                        className="badge"
+                        style={{
+                          background: "#ef4444",
+                          color: "white",
+                          fontSize: "0.6rem",
+                        }}
+                      >
+                        ⚠️ Dup Phone
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="fire-btn fire-btn-secondary"
+                  style={{
+                    width: "auto",
+                    padding: "4px 10px",
+                    fontSize: "0.75rem",
+                  }}
+                  onClick={() => setExpanded(expanded === u.uid ? null : u.uid)}
+                  data-ocid={`admin.users.edit_button.${i + 1}`}
+                >
+                  {expanded === u.uid ? (
+                    <ChevronUp size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                </button>
+              </div>
+              {expanded === u.uid && (
+                <div
+                  style={{
+                    borderTop: "1px solid var(--border-color)",
+                    paddingTop: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "var(--muted)",
+                      fontSize: "0.75rem",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Wins: {u.wins} | Kills: {u.kills} | Matches:{" "}
+                    {u.matchesPlayed}
+                  </div>
+                  <div
+                    style={{
+                      color: "#ff9500",
+                      fontSize: "0.75rem",
+                      marginBottom: 8,
+                      background: "rgba(255,107,0,0.1)",
+                      border: "1px solid rgba(255,107,0,0.3)",
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      display: "inline-block",
+                    }}
+                  >
+                    📞 {u.phone || "No phone"}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <input
+                      className="fire-input"
+                      type="number"
+                      placeholder="Coins"
+                      value={coinsInput[u.uid] || ""}
+                      onChange={(e) =>
+                        setCoinsInput((prev) => ({
+                          ...prev,
+                          [u.uid]: e.target.value,
+                        }))
+                      }
+                      style={{ flex: 1 }}
+                      data-ocid={`admin.users.coins.input.${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-success"
+                      style={{
+                        width: "auto",
+                        padding: "6px 12px",
+                        fontSize: "0.75rem",
+                      }}
+                      onClick={() =>
+                        addCoins(u.uid, Number(coinsInput[u.uid] || 0))
+                      }
+                      data-ocid={`admin.users.add.button.${i + 1}`}
+                    >
+                      +Add
+                    </button>
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-danger"
+                      style={{
+                        width: "auto",
+                        padding: "6px 12px",
+                        fontSize: "0.75rem",
+                      }}
+                      onClick={() =>
+                        removeCoins(u.uid, Number(coinsInput[u.uid] || 0))
+                      }
+                      data-ocid={`admin.users.remove.button.${i + 1}`}
+                    >
+                      -Remove
+                    </button>
+                  </div>
+                  {!u.blocked && (
+                    <input
+                      className="fire-input"
+                      placeholder="Ban reason (optional)..."
+                      value={banReasonInput[u.uid] || ""}
+                      onChange={(e) =>
+                        setBanReasonInput((prev) => ({
+                          ...prev,
+                          [u.uid]: e.target.value,
+                        }))
+                      }
+                      style={{ marginBottom: 6, fontSize: "0.75rem" }}
+                      data-ocid={`admin.users.ban_reason.input.${i + 1}`}
+                    />
+                  )}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      type="button"
+                      className={`fire-btn ${u.blocked ? "fire-btn-success" : "fire-btn-warning"}`}
+                      style={{ fontSize: "0.78rem" }}
+                      onClick={() => toggleBlock(u)}
+                      data-ocid={`admin.users.block.toggle.${i + 1}`}
+                    >
+                      {u.blocked ? "✅ Unblock" : "🚫 Block"}
+                    </button>
+                    <button
+                      type="button"
+                      className="fire-btn fire-btn-danger"
+                      style={{ fontSize: "0.78rem" }}
+                      onClick={() => deleteUser(u.uid)}
+                      data-ocid={`admin.users.delete_button.${i + 1}`}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="empty-state" data-ocid="admin.users.empty_state">
+              <div className="empty-state-icon">👥</div>
+              <div>No users found</div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -6026,6 +7951,34 @@ function AdminMatchesView({
           : []),
       ]);
       await logAdminAction(`Awarded prize ₹${winnerPrize}`, winner);
+      // Auto-announce winner notification
+      try {
+        await addDoc(collection(db, "notifications"), {
+          uid: winner,
+          title: "🏆 You Won!",
+          message: `Congratulations! You won ₹${winnerPrize} in ${m.mode?.toUpperCase()}! Prize credited to your wallet.`,
+          read: false,
+          timestamp: new Date(),
+        });
+        // Also notify losers if players array exists
+        if (m.players && m.players.length > 0) {
+          const losers = m.players.filter((p: string) => p !== winner);
+          await Promise.all(
+            losers.map((loserUid: string) =>
+              addDoc(collection(db, "notifications"), {
+                uid: loserUid,
+                title: "❌ Match Result",
+                message: `${m.mode?.toUpperCase()} match ended. Better luck next time!`,
+                read: false,
+                timestamp: new Date(),
+              }).catch(() => {}),
+            ),
+          );
+        }
+      } catch (_) {
+        /* ignore notification error */
+      }
+      playWinSound();
       showToast(`🏆 Prize ₹${winnerPrize} awarded to ${winner}!`);
       load();
     } catch (err) {
@@ -7334,6 +9287,9 @@ function AdminAnnouncementsView({
 }) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [dmUid, setDmUid] = useState("");
+  const [dmTitle, setDmTitle] = useState("");
+  const [dmMessage, setDmMessage] = useState("");
   const [recents, setRecents] = useState<
     { id: string; title: string; message: string; timestamp: unknown }[]
   >([]);
@@ -7394,11 +9350,59 @@ function AdminAnnouncementsView({
         }),
       );
       await Promise.all(batch);
+      // Send real push notifications to all users with FCM tokens
+      sendPushToAllUsers(title.trim(), message.trim());
       await logAdminAction("Sent announcement", title);
       showToast(`Announcement sent to ${usersSnap.size} users!`);
       setTitle("");
       setMessage("");
       load();
+    } catch (_) {
+      showToast("Error sending", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendDirect = async () => {
+    if (!dmUid.trim() || !dmTitle.trim() || !dmMessage.trim()) {
+      showToast("Fill all direct message fields", "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Save notification for specific user
+      await addDoc(collection(db, "notifications"), {
+        uid: dmUid.trim(),
+        title: dmTitle.trim(),
+        message: dmMessage.trim(),
+        read: false,
+        timestamp: new Date(),
+      });
+      // Send FCM push to that user's token
+      const uSnap = await getDoc(doc(db, "users", dmUid.trim()));
+      if (uSnap.exists()) {
+        const token = uSnap.data()?.fcmToken;
+        if (token && FCM_SERVER_KEY) {
+          await fetch("https://fcm.googleapis.com/fcm/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `key=${FCM_SERVER_KEY}`,
+            },
+            body: JSON.stringify({
+              to: token,
+              notification: { title: dmTitle.trim(), body: dmMessage.trim() },
+              priority: "high",
+            }),
+          }).catch(() => {});
+        }
+      }
+      await logAdminAction("Sent direct message", dmUid.trim());
+      showToast(`Message sent to ${dmUid.trim()}!`);
+      setDmUid("");
+      setDmTitle("");
+      setDmMessage("");
     } catch (_) {
       showToast("Error sending", "error");
     } finally {
@@ -7439,6 +9443,51 @@ function AdminAnnouncementsView({
           data-ocid="admin.announcements.submit_button"
         >
           📢 Send to All Users
+        </button>
+      </div>
+
+      {/* Direct Message Section */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="section-label">💬 Send Direct Message</div>
+        <div className="field-group" style={{ marginBottom: 8 }}>
+          <div className="field-label">Player UID</div>
+          <input
+            className="fire-input"
+            placeholder="Enter target UID..."
+            value={dmUid}
+            onChange={(e) => setDmUid(e.target.value)}
+            data-ocid="admin.dm.input"
+          />
+        </div>
+        <div className="field-group" style={{ marginBottom: 8 }}>
+          <div className="field-label">Title</div>
+          <input
+            className="fire-input"
+            placeholder="Message title..."
+            value={dmTitle}
+            onChange={(e) => setDmTitle(e.target.value)}
+            data-ocid="admin.dm.title.input"
+          />
+        </div>
+        <div className="field-group" style={{ marginBottom: 10 }}>
+          <div className="field-label">Message</div>
+          <textarea
+            className="fire-input"
+            placeholder="Write message..."
+            value={dmMessage}
+            onChange={(e) => setDmMessage(e.target.value)}
+            rows={3}
+            style={{ resize: "vertical", fontFamily: "Rajdhani, sans-serif" }}
+            data-ocid="admin.dm.textarea"
+          />
+        </div>
+        <button
+          type="button"
+          className="fire-btn fire-btn-secondary"
+          onClick={sendDirect}
+          data-ocid="admin.dm.submit_button"
+        >
+          💬 Send to Player
         </button>
       </div>
       {recents.length > 0 && (

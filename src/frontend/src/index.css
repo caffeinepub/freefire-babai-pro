@@ -56,7 +56,8 @@ body {
   color: #ffffff;
   font-family: "Rajdhani", "Orbitron", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: none;
 }
 
@@ -92,6 +93,15 @@ a {
   --navy-border: rgba(255, 107, 0, 0.3);
   --green-cta: #00c864;
   --muted: rgba(255, 255, 255, 0.5);
+  /* Semantic aliases used throughout App.tsx */
+  --text: #ffffff;
+  --bg: #0a0a1a;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --border-color: rgba(255, 107, 0, 0.25);
+  --accent: #ff6b00;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
 }
 
 /* ================================================================
@@ -186,7 +196,7 @@ a {
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;
 }
 
 .app-header {
@@ -1690,8 +1700,8 @@ body.light-mode .bottom-nav {
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 /* ================================================================
@@ -1785,4 +1795,517 @@ body.light-mode .bottom-nav {
   font-family: "Rajdhani", sans-serif;
   font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.75);
+}
+
+/* ================================================================
+   AUTH WATERMARK
+   ================================================================ */
+.auth-watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-35deg);
+  font-size: clamp(3rem, 15vw, 7rem);
+  font-family: "Orbitron", sans-serif;
+  color: rgba(255, 107, 0, 0.06);
+  pointer-events: none;
+  z-index: 0;
+  white-space: nowrap;
+  font-weight: 900;
+  user-select: none;
+  letter-spacing: 0.1em;
+}
+
+/* ================================================================
+   MISSING CSS CLASSES
+   ================================================================ */
+.mode-stat {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.stat-box {
+  background: rgba(255, 107, 0, 0.08);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-live {
+  background: rgba(255, 107, 0, 0.2);
+  color: #ff6b00;
+  border: 1px solid rgba(255, 107, 0, 0.4);
+}
+
+.badge-completed {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.badge-full {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-approved {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.fire-btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+}
+
+/* Room info boxes */
+.room-info-box {
+  background: rgba(255, 107, 0, 0.08);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.room-info-label {
+  font-size: 0.62rem;
+  color: #ff9a00;
+  font-family: "Orbitron", sans-serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.room-info-value {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: white;
+  letter-spacing: 0.08em;
+}
+
+/* Pulse dot */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+  animation: livePulse 1.5s infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Chat bubble */
+.chat-bubble-sent {
+  max-width: 78%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.28),
+    rgba(204, 85, 0, 0.22)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  border-radius: 14px 14px 4px 14px;
+  padding: 9px 13px;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
+  color: white;
+  line-height: 1.4;
+}
+
+/* Chat input row */
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(255, 107, 0, 0.1);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 107, 0, 0.18);
+  color: white;
+}
+
+/* Auth form */
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 20px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(8px);
+}
+
+.auth-subtitle {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: "Rajdhani", sans-serif;
+  text-align: center;
+  margin-bottom: 4px;
+  margin-top: -8px;
+}
+
+/* Blocked screen */
+.blocked-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, #0a0a1a 100%);
+}
+
+/* Quick button in admin */
+.quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: rgba(255, 107, 0, 0.08);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.quick-btn:hover {
+  background: rgba(255, 107, 0, 0.16);
+  border-color: rgba(255, 107, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Footer */
+.footer-text {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.footer-text a {
+  color: #ff6b00;
+  text-decoration: underline;
+}
+
+/* Auth logo */
+.auth-logo {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #ff6b00;
+  text-align: center;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+/* Live pulse animation */
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 14px rgba(255, 107, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255, 107, 0, 0.45);
+  }
+}
+
+/* Progress fill for splash */
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ================================================================
+   NOTIFICATIONS
+   ================================================================ */
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 107, 0, 0.12);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  font-family: "Rajdhani", sans-serif;
+  transition: all 0.2s;
+}
+
+.notif-item.unread {
+  background: rgba(255, 107, 0, 0.07);
+  border-color: rgba(255, 107, 0, 0.28);
+}
+
+/* ================================================================
+   LIGHT MODE — COMPREHENSIVE OVERRIDES
+   ================================================================ */
+body.light-mode {
+  --bg: #f8f8f8;
+  --card-bg: #ffffff;
+  --text: #1a1a1a;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --muted: rgba(0, 0, 0, 0.5);
+  --navy: #f0f0f8;
+  background: #f8f8f8;
+  color: #1a1a1a;
+}
+
+body.light-mode .app-container {
+  background: #f8f8f8;
+}
+
+body.light-mode .auth-page {
+  background: #f4f4f8;
+}
+
+body.light-mode .auth-form {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 107, 0, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .fire-input {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1a1a1a;
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+body.light-mode .fire-input::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+body.light-mode .card,
+body.light-mode .mode-card {
+  background: #ffffff;
+  border-color: rgba(255, 107, 0, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .app-header,
+body.light-mode .bottom-nav {
+  background: rgba(248, 248, 248, 0.97);
+  border-color: rgba(255, 107, 0, 0.15);
+}
+
+body.light-mode .welcome-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.08),
+    rgba(248, 248, 248, 0.95)
+  );
+  border-color: rgba(255, 107, 0, 0.25);
+}
+
+body.light-mode .welcome-name {
+  color: #1a1a1a;
+}
+
+body.light-mode .welcome-coins {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+body.light-mode .stat-box {
+  background: rgba(255, 107, 0, 0.06);
+  border-color: rgba(255, 107, 0, 0.18);
+}
+
+body.light-mode .profile-header {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.07),
+    rgba(248, 248, 248, 0.95)
+  );
+  border-color: rgba(255, 107, 0, 0.2);
+}
+
+body.light-mode .profile-name {
+  color: #1a1a1a;
+}
+
+body.light-mode .section-label {
+  color: #cc5500;
+}
+
+body.light-mode .list-item {
+  background: #ffffff;
+  border-color: rgba(255, 107, 0, 0.15);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .notif-item {
+  background: #ffffff;
+  border-color: rgba(255, 107, 0, 0.15);
+}
+
+body.light-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+body.light-mode .modal-sheet {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f4f8 100%);
+  border-color: rgba(255, 107, 0, 0.25);
+}
+
+body.light-mode .admin-panel {
+  background: #f8f8f8;
+}
+
+body.light-mode .empty-state {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.light-mode .card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+}
+
+body.light-mode .list-item {
+  background: #f8f8f8;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1a1a1a;
+}
+
+body.light-mode .view-title {
+  color: #1a1a1a;
+}
+
+body.light-mode .field-label {
+  color: #333;
+}
+
+body.light-mode .fire-input {
+  background: #f0f0f0;
+  color: #1a1a1a;
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+body.light-mode .fire-input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+body.light-mode .quick-btn {
+  background: #f0f0f0;
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+body.light-mode .section-label {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.light-mode .admin-panel {
+  background: #fff;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+body.light-mode .admin-title {
+  color: #dc2626;
+}
+
+body.light-mode .modal-sheet {
+  background: #f5f5f5;
+}
+
+body.light-mode .badge {
+  background: rgba(0, 0, 0, 0.08);
+  color: #333;
+}
+
+body.light-mode .welcome-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.08),
+    rgba(248, 248, 248, 0.95)
+  );
+}
+
+body.light-mode .profile-header {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.07),
+    rgba(248, 248, 248, 0.98)
+  );
+}
+
+body.light-mode .stat-box {
+  background: rgba(255, 107, 0, 0.06);
+  border-color: rgba(255, 107, 0, 0.18);
+}
+
+body.light-mode .mode-card {
+  background: #ffffff;
+  border-color: rgba(255, 107, 0, 0.2);
+}
+
+body.light-mode .notif-item {
+  background: #ffffff;
+  border-color: rgba(255, 107, 0, 0.15);
+}
+
+body.light-mode .notif-item.unread {
+  background: rgba(255, 107, 0, 0.05);
+  border-color: rgba(255, 107, 0, 0.25);
 }
