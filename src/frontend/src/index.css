@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap");
 
 @font-face {
   font-family: "Bricolage Grotesque";
@@ -23,19 +24,19 @@
     --foreground: 0.94 0.01 245;
     --card: 0.12 0.04 245;
     --card-foreground: 0.94 0.01 245;
-    --primary: 0.78 0.15 205;
+    --primary: 0.65 0.22 42;
     --primary-foreground: 0.06 0.01 245;
     --secondary: 0.16 0.05 250;
     --secondary-foreground: 0.88 0.01 245;
     --muted: 0.16 0.03 250;
     --muted-foreground: 0.55 0.04 250;
-    --accent: 0.72 0.14 205;
+    --accent: 0.55 0.2 42;
     --accent-foreground: 0.06 0.01 245;
     --destructive: 0.55 0.26 22;
     --destructive-foreground: 0.98 0 0;
     --border: 0.22 0.06 245;
     --input: 0.16 0.04 250;
-    --ring: 0.78 0.15 205;
+    --ring: 0.65 0.22 42;
     --radius: 0.75rem;
   }
 }
@@ -51,9 +52,9 @@
 html,
 body {
   height: 100%;
-  background: #06101e;
-  color: #e8f4ff;
-  font-family: "Orbitron", "Figtree", system-ui, sans-serif;
+  background: #0a0a1a;
+  color: #ffffff;
+  font-family: "Rajdhani", "Orbitron", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -79,815 +80,1539 @@ a {
 }
 
 /* ================================================================
-   LOBBY
+   CSS VARIABLES
    ================================================================ */
-.sfr-lobby {
+:root {
+  --orange: #ff6b00;
+  --orange-dark: #cc5500;
+  --orange-glow: rgba(255, 107, 0, 0.4);
+  --navy: #0a0a1a;
+  --navy-card: rgba(255, 255, 255, 0.05);
+  --navy-border: rgba(255, 107, 0, 0.3);
+  --green-cta: #00c864;
+  --muted: rgba(255, 255, 255, 0.5);
+}
+
+/* ================================================================
+   KEYFRAMES
+   ================================================================ */
+@keyframes dhurandar3d {
+  0% {
+    transform: perspective(400px) rotateY(0deg) scale(1);
+    text-shadow: 0 0 12px #ff6b00, 0 0 30px rgba(255, 107, 0, 0.5);
+  }
+  25% {
+    transform: perspective(400px) rotateY(15deg) scale(1.03);
+    text-shadow: 0 0 20px #ff6b00, 0 0 50px rgba(255, 107, 0, 0.7), 4px 0 8px
+      rgba(255, 200, 0, 0.4);
+  }
+  50% {
+    transform: perspective(400px) rotateY(0deg) scale(1.05);
+    text-shadow: 0 0 25px #ff9500, 0 0 60px rgba(255, 150, 0, 0.8);
+  }
+  75% {
+    transform: perspective(400px) rotateY(-15deg) scale(1.03);
+    text-shadow: 0 0 20px #ff6b00, 0 0 50px rgba(255, 107, 0, 0.7), -4px 0 8px
+      rgba(255, 200, 0, 0.4);
+  }
+  100% {
+    transform: perspective(400px) rotateY(0deg) scale(1);
+    text-shadow: 0 0 12px #ff6b00, 0 0 30px rgba(255, 107, 0, 0.5);
+  }
+}
+
+@keyframes spinLoader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--orange-glow);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--orange-glow), 0 0 50px rgba(255, 107, 0, 0.3);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ================================================================
+   APP STRUCTURE
+   ================================================================ */
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 50;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 26, 0.98) 0%,
+    rgba(10, 10, 26, 0.85) 100%
+  );
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 107, 0, 0.2);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff6b00, #ffaa00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.05em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  color: #ff6b00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 107, 0, 0.25);
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00c864;
+  box-shadow: 0 0 6px #00c864;
+  animation: livePulse 2s infinite;
+}
+
+.offline-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.player-count {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Rajdhani", sans-serif;
+}
+
+/* ================================================================
+   LOADING
+   ================================================================ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 10, 26, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 107, 0, 0.2);
+  border-top-color: #ff6b00;
+  border-radius: 50%;
+  animation: spinLoader 0.8s linear infinite;
+}
+
+/* ================================================================
+   SPLASH
+   ================================================================ */
+.splash-screen {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem 4rem;
+  gap: 32px;
   background: radial-gradient(
-      ellipse at 50% 0%,
-      rgba(88, 211, 255, 0.12) 0%,
+      ellipse at center,
+      rgba(255, 107, 0, 0.08) 0%,
       transparent 60%
-    ), linear-gradient(160deg, #06101e 0%, #0b1a33 60%, #06101e 100%);
+    ), #0a0a1a;
+}
+
+/* ================================================================
+   AUTH PAGES
+   ================================================================ */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 20px 100px;
+  overflow-y: auto;
+  position: relative;
+  background: #0a0a1a;
+}
+
+.dhurandar-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ff6b00;
+  text-transform: uppercase;
+  animation: dhurandar3d 3s ease-in-out infinite;
+  margin-bottom: 4px;
+  display: block;
+  text-align: center;
+}
+
+.dhurandar-tagline {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.auth-logo {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #ff6b00;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-bottom: 20px;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 16px;
+  padding: 24px 20px;
+  backdrop-filter: blur(8px);
+}
+
+.create-account-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #00c864, #00a050);
+  color: white;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 900;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 200, 100, 0.4);
+  transition: all 0.25s;
+  text-transform: uppercase;
+}
+
+.create-account-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 200, 100, 0.5);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fire-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  border-radius: 10px;
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s;
+  font-family: "Rajdhani", sans-serif;
+}
+
+.fire-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.fire-input:focus {
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+  background: rgba(255, 107, 0, 0.08);
+}
+
+.fire-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #ff6b00, #cc5500);
+  color: white;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.4);
+  transition: all 0.2s;
+}
+
+.fire-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 107, 0, 0.5);
+}
+
+.fire-btn:active {
+  transform: translateY(0);
+}
+
+.fire-btn-secondary {
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #ff6b00;
+  box-shadow: none;
+}
+
+.fire-btn-secondary:hover {
+  background: rgba(255, 107, 0, 0.25);
+}
+
+.fire-btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.fire-btn-success {
+  background: linear-gradient(135deg, #00c864, #00a050);
+  box-shadow: 0 4px 16px rgba(0, 200, 100, 0.4);
+}
+
+.auth-link {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: "Rajdhani", sans-serif;
+  transition: color 0.2s;
+}
+
+.auth-link:hover {
+  color: #ff6b00;
+}
+
+/* ================================================================
+   BOTTOM NAV
+   ================================================================ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 50;
+  background: linear-gradient(0deg, #0d0d1f 0%, rgba(13, 13, 31, 0.95) 100%);
+  border-top: 1px solid rgba(255, 107, 0, 0.2);
+  display: flex;
+  padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  backdrop-filter: blur(16px);
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.62rem;
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-item.active {
+  color: #ff6b00;
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 2px;
+  background: #ff6b00;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 0 8px #ff6b00;
+}
+
+/* ================================================================
+   VIEW CONTAINERS
+   ================================================================ */
+.view-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 58px 12px 80px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.view-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ff6b00;
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+
+.section-label {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ff6b00;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+/* ================================================================
+   CARDS
+   ================================================================ */
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.card-glow {
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.15), inset 0 1px 0
+    rgba(255, 255, 255, 0.05);
+}
+
+/* ================================================================
+   MODE CARDS
+   ================================================================ */
+.mode-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.mode-card:hover {
+  border-color: rgba(255, 107, 0, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 107, 0, 0.2);
+}
+
+.mode-poster {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.mode-poster-fallback {
+  width: 100%;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.15),
+    rgba(10, 10, 26, 0.8)
+  );
+}
+
+.mode-info {
+  padding: 10px 14px 12px;
+}
+
+.mode-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.mode-desc {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.mode-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  color: #ff6b00;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 600;
+}
+
+.join-btn {
+  float: right;
+  margin-top: -4px;
+  padding: 7px 16px;
+  background: linear-gradient(135deg, #ff6b00, #cc5500);
+  color: white;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 10px rgba(255, 107, 0, 0.4);
+  transition: all 0.2s;
+}
+
+.join-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ================================================================
+   MODALS
+   ================================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(180deg, #111122 0%, #0a0a1a 100%);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 20px 32px;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
-.sfr-hero {
-  text-align: center;
-  margin-bottom: 2rem;
-  animation: sfr-float 3s ease-in-out infinite;
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  margin: 0 auto 20px;
 }
 
-@keyframes sfr-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-.sfr-title-glow {
+.modal-title {
   font-family: "Orbitron", sans-serif;
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: #58d3ff;
-  text-shadow: 0 0 30px rgba(88, 211, 255, 0.7), 0 0 60px
-    rgba(88, 211, 255, 0.35);
-  animation: sfr-glow-pulse 2s ease-in-out infinite;
-}
-
-@keyframes sfr-glow-pulse {
-  0%,
-  100% {
-    text-shadow: 0 0 20px rgba(88, 211, 255, 0.6), 0 0 40px
-      rgba(88, 211, 255, 0.3);
-  }
-  50% {
-    text-shadow: 0 0 40px rgba(88, 211, 255, 0.9), 0 0 80px
-      rgba(88, 211, 255, 0.5);
-  }
-}
-
-.sfr-title-sub {
-  font-family: "Orbitron", sans-serif;
-  font-size: clamp(1.2rem, 4vw, 2rem);
-  font-weight: 900;
-  letter-spacing: 0.28em;
-  color: #ffffff;
-  text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-}
-
-.sfr-tagline {
-  font-size: 0.85rem;
-  color: rgba(88, 211, 255, 0.6);
-  letter-spacing: 0.15em;
-  margin-top: 0.4rem;
-  text-transform: uppercase;
-}
-
-.sfr-lobby-card {
-  width: 100%;
-  max-width: 440px;
-  background: rgba(10, 25, 48, 0.85);
-  border: 1px solid rgba(88, 211, 255, 0.25);
-  border-radius: 16px;
-  padding: 2rem 1.75rem;
-  box-shadow: 0 0 40px rgba(88, 211, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-}
-
-.sfr-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.sfr-label {
-  font-size: 0.65rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  color: rgba(88, 211, 255, 0.7);
-}
-
-.sfr-input {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: rgba(6, 16, 30, 0.8);
-  border: 1.5px solid rgba(88, 211, 255, 0.2);
-  color: #e8f4ff;
-  font-size: 0.95rem;
-  font-family: "Orbitron", sans-serif;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.sfr-input:focus {
-  border-color: rgba(88, 211, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(88, 211, 255, 0.1);
-}
-.sfr-input::placeholder {
-  color: rgba(88, 211, 255, 0.3);
-}
-.sfr-input--code {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.sfr-mode-toggle {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.sfr-mode-btn {
-  flex: 1;
-  padding: 0.65rem;
-  border-radius: 8px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  background: rgba(88, 211, 255, 0.06);
-  border: 1.5px solid rgba(88, 211, 255, 0.18);
-  color: rgba(88, 211, 255, 0.55);
-  transition: all 0.2s;
-}
-.sfr-mode-btn:hover {
-  background: rgba(88, 211, 255, 0.12);
-  border-color: rgba(88, 211, 255, 0.4);
-  color: #58d3ff;
-}
-.sfr-mode-btn--active {
-  background: rgba(88, 211, 255, 0.18) !important;
-  border-color: #58d3ff !important;
-  color: #58d3ff !important;
-  box-shadow: 0 0 14px rgba(88, 211, 255, 0.25);
-}
-
-.sfr-btn {
-  width: 100%;
-  padding: 0.9rem;
-  border-radius: 10px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.9rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-.sfr-btn--primary {
-  background: linear-gradient(135deg, #58d3ff 0%, #1a9fd4 100%);
-  color: #06101e;
-  border: none;
-  box-shadow: 0 0 24px rgba(88, 211, 255, 0.4);
-}
-.sfr-btn--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 36px rgba(88, 211, 255, 0.6);
-}
-.sfr-btn--primary:disabled {
-  opacity: 0.5;
-  transform: none;
-  cursor: not-allowed;
-}
-.sfr-btn--secondary {
-  background: rgba(88, 211, 255, 0.08);
-  color: #58d3ff;
-  border: 1.5px solid rgba(88, 211, 255, 0.3);
-}
-.sfr-btn--secondary:hover {
-  background: rgba(88, 211, 255, 0.15);
-  border-color: #58d3ff;
-  transform: translateY(-1px);
-}
-
-.sfr-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: rgba(88, 211, 255, 0.3);
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-}
-.sfr-divider::before,
-.sfr-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(88, 211, 255, 0.15);
-}
-
-.sfr-join-row {
-  display: flex;
-  gap: 0.6rem;
-}
-.sfr-join-btn {
-  width: auto;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.8rem;
-}
-
-.sfr-error {
-  color: #ff5555;
-  font-size: 0.75rem;
-  background: rgba(255, 85, 85, 0.1);
-  border: 1px solid rgba(255, 85, 85, 0.3);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
+  color: #ff6b00;
+  margin-bottom: 16px;
   text-align: center;
-  letter-spacing: 0.06em;
 }
 
 /* ================================================================
-   LOBBY ROOM
+   HERO BANNER
    ================================================================ */
-.sfr-room-header {
+.hero-banner {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  min-height: 120px;
+  background: linear-gradient(135deg, #1a0a00, #2d1000, #1a0500);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 20px;
+  border: 1px solid rgba(255, 107, 0, 0.3);
 }
 
-.sfr-logo {
+.hero-banner-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.4;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-title {
   font-family: "Orbitron", sans-serif;
-  font-size: 0.8rem;
+  font-size: 1.1rem;
   font-weight: 900;
-  color: #58d3ff;
-  letter-spacing: 0.12em;
+  background: linear-gradient(135deg, #ff6b00, #ffaa00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
 }
 
-.sfr-room-code {
-  font-size: 0.7rem;
-  color: rgba(88, 211, 255, 0.6);
-  letter-spacing: 0.08em;
-}
-.sfr-room-code span {
-  color: #58d3ff;
-  font-weight: 700;
+.hero-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: "Rajdhani", sans-serif;
 }
 
-.sfr-mode-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(88, 211, 255, 0.12);
-  border: 1px solid rgba(88, 211, 255, 0.3);
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #58d3ff;
-  letter-spacing: 0.14em;
-  text-align: center;
-}
-
-.sfr-section-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: rgba(88, 211, 255, 0.5);
-  margin-bottom: 0.5rem;
-}
-
-.sfr-players-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.35rem;
-}
-
-.sfr-player-slot {
-  padding: 0.4rem 0.3rem;
-  border-radius: 6px;
-  background: rgba(6, 16, 30, 0.6);
-  border: 1px solid rgba(88, 211, 255, 0.08);
-  min-height: 36px;
-  display: flex;
+.live-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-.sfr-player-slot--filled {
-  border-color: rgba(88, 211, 255, 0.2);
+  gap: 5px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  font-size: 0.65rem;
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
 }
 
-.sfr-player-dot {
-  width: 8px;
-  height: 8px;
+.live-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  flex-shrink: 0;
+  background: #ef4444;
+  animation: livePulse 1s infinite;
 }
 
-.sfr-player-slot-name {
-  font-size: 0.62rem;
+/* ================================================================
+   UPI INFO BOX
+   ================================================================ */
+.upi-box {
+  background: linear-gradient(135deg, #0e1420, #121929, #0d1a3a);
+  border: 2px solid #ff6b00;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.2), inset 0 1px 0
+    rgba(255, 255, 255, 0.05);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.upi-label {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.upi-value {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ff6b00;
+  word-break: break-all;
+}
+
+.copy-btn {
+  padding: 4px 10px;
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  border-radius: 6px;
+  color: #ff6b00;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: "Rajdhani", sans-serif;
   font-weight: 600;
-  color: #e8f4ff;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  transition: all 0.2s;
   white-space: nowrap;
 }
 
-.sfr-team-badge {
-  font-size: 0.55rem;
-  font-weight: 700;
-  border-radius: 4px;
-  padding: 0.1rem 0.25rem;
-  color: white;
-  flex-shrink: 0;
+.copy-btn:hover {
+  background: rgba(255, 107, 0, 0.25);
 }
 
-.sfr-slot-empty {
-  font-size: 0.55rem;
-  color: rgba(88, 211, 255, 0.25);
-  letter-spacing: 0.06em;
-}
-
-.sfr-share-box {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.85rem;
-  background: rgba(88, 211, 255, 0.06);
-  border: 1px solid rgba(88, 211, 255, 0.15);
-  border-radius: 8px;
-  font-size: 0.75rem;
-  color: rgba(88, 211, 255, 0.6);
-}
-.sfr-share-box strong {
-  color: #58d3ff;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-}
-
-.sfr-copy-btn {
-  margin-left: auto;
-  padding: 0.2rem 0.65rem;
-  border-radius: 5px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: rgba(88, 211, 255, 0.15);
-  border: 1px solid rgba(88, 211, 255, 0.3);
-  color: #58d3ff;
-  font-family: "Orbitron", sans-serif;
-  letter-spacing: 0.08em;
-  transition: background 0.2s;
-}
-.sfr-copy-btn:hover {
-  background: rgba(88, 211, 255, 0.25);
-}
-
-.sfr-lobby-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-/* ================================================================
-   GAME SCREEN
-   ================================================================ */
-.sfr-game-screen {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-}
-
-.sfr-canvas {
-  display: block;
-  position: absolute;
-  inset: 0;
-}
-
-/* ================================================================
-   HUD
-   ================================================================ */
-.sfr-hud-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 48px;
-  background: rgba(6, 16, 30, 0.82);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(88, 211, 255, 0.18);
-  display: flex;
-  align-items: center;
-  padding: 0 1rem;
-  gap: 1rem;
-  z-index: 100;
-  pointer-events: none;
-}
-
-.sfr-hud-logo {
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.7rem;
-  font-weight: 900;
-  color: #58d3ff;
-  letter-spacing: 0.12em;
-  text-shadow: 0 0 10px rgba(88, 211, 255, 0.5);
-  flex-shrink: 0;
-}
-
-.sfr-hud-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.sfr-alive-count {
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: 0.1em;
-}
-
-.sfr-hud-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.sfr-mode-pill,
-.sfr-room-pill {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  letter-spacing: 0.1em;
-}
-.sfr-mode-pill {
-  background: rgba(88, 211, 255, 0.15);
-  border: 1px solid rgba(88, 211, 255, 0.3);
-  color: #58d3ff;
-}
-.sfr-room-pill {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.sfr-hud-player-panel {
-  position: fixed;
-  top: 58px;
-  left: 12px;
-  min-width: 180px;
-  max-width: 220px;
-  background: rgba(6, 16, 30, 0.8);
-  border: 1px solid rgba(88, 211, 255, 0.2);
-  border-radius: 10px;
-  padding: 0.65rem 0.85rem;
-  backdrop-filter: blur(8px);
-  z-index: 100;
-  pointer-events: none;
-}
-
-.sfr-hud-name {
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #58d3ff;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.35rem;
-}
-
-.sfr-hp-label {
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.06em;
-  margin-bottom: 0.2rem;
-}
-
-.sfr-hp-bar-bg {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  margin-bottom: 0.35rem;
-}
-
-.sfr-hp-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.15s ease, background 0.3s;
-}
-
-.sfr-wep-label {
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: rgba(88, 211, 255, 0.8);
-  letter-spacing: 0.06em;
-  margin-top: 0.2rem;
-}
-
-/* Kill Feed */
-.sfr-kill-feed {
-  position: fixed;
-  right: 12px;
-  top: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  pointer-events: none;
-  z-index: 100;
-  max-width: 260px;
-}
-
-.sfr-kill-row {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: rgba(6, 16, 30, 0.75);
-  border: 1px solid rgba(88, 211, 255, 0.12);
+.wa-btn {
+  padding: 4px 10px;
+  background: rgba(0, 200, 100, 0.15);
+  border: 1px solid rgba(0, 200, 100, 0.3);
   border-radius: 6px;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.65rem;
-  animation: sfr-killfeed-in 0.3s ease;
+  color: #00c864;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
-@keyframes sfr-killfeed-in {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.wa-btn:hover {
+  background: rgba(0, 200, 100, 0.25);
 }
 
-.sfr-kill-killer {
-  color: #58d3ff;
-  font-weight: 700;
-}
-.sfr-kill-icon {
-  color: #ff6644;
-}
-.sfr-kill-victim {
-  color: #ff4444;
-}
-
-/* Weapon slots */
-.sfr-weapon-slots {
-  position: fixed;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%);
+/* ================================================================
+   SCHEDULE
+   ================================================================ */
+.schedule-item {
   display: flex;
-  gap: 0.5rem;
-  z-index: 100;
-  pointer-events: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s;
 }
 
-.sfr-wep-slot {
-  width: 64px;
-  padding: 0.4rem 0.3rem;
-  border-radius: 8px;
-  background: rgba(6, 16, 30, 0.8);
-  border: 1.5px solid rgba(88, 211, 255, 0.15);
-  text-align: center;
-  transition: all 0.15s;
+.schedule-item.live-slot {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: white;
 }
-.sfr-wep-slot--active {
-  border-color: #58d3ff;
-  background: rgba(88, 211, 255, 0.12);
-  box-shadow: 0 0 14px rgba(88, 211, 255, 0.3);
-}
-.sfr-wep-slot-icon {
-  display: block;
-  font-size: 1rem;
-}
-.sfr-wep-slot-name {
-  display: block;
-  font-size: 0.5rem;
+
+.schedule-time {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: rgba(88, 211, 255, 0.7);
-  letter-spacing: 0.06em;
+  color: #ff6b00;
+  min-width: 52px;
+}
+
+/* ================================================================
+   LEADERBOARD
+   ================================================================ */
+.rank-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.rank-card.top-1 {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.08),
+    rgba(255, 107, 0, 0.05)
+  );
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.rank-card.top-2 {
+  background: linear-gradient(
+    135deg,
+    rgba(192, 192, 192, 0.08),
+    rgba(255, 107, 0, 0.03)
+  );
+  border-color: rgba(192, 192, 192, 0.3);
+}
+
+.rank-card.top-3 {
+  background: linear-gradient(
+    135deg,
+    rgba(205, 127, 50, 0.08),
+    rgba(255, 107, 0, 0.03)
+  );
+  border-color: rgba(205, 127, 50, 0.3);
+}
+
+.rank-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #ffd700, #ff9500);
+  color: #000;
+}
+.rank-2 {
+  background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+  color: #000;
+}
+.rank-3 {
+  background: linear-gradient(135deg, #cd7f32, #a0522d);
+  color: white;
+}
+.rank-other {
+  background: rgba(255, 107, 0, 0.1);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  color: #ff6b00;
+}
+
+.rank-name {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  flex: 1;
+}
+
+.rank-uid {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.rank-coins {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ff6b00;
+}
+
+/* ================================================================
+   PROFILE
+   ================================================================ */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.08),
+    rgba(10, 10, 26, 0.95)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 16px;
+  margin-bottom: 14px;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 10px;
+  border: 3px solid rgba(255, 107, 0, 0.5);
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.profile-name {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.profile-uid {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ff6b00;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "Rajdhani", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   margin-top: 2px;
 }
-.sfr-wep-slot-ammo {
-  display: block;
-  font-size: 0.55rem;
-  color: rgba(255, 255, 255, 0.5);
-}
 
 /* ================================================================
-   MOBILE CONTROLS
+   ADMIN
    ================================================================ */
-.sfr-dpad {
-  position: fixed;
-  bottom: 24px;
-  left: 20px;
-  z-index: 200;
-  touch-action: none;
-  user-select: none;
+.admin-panel {
+  min-height: 100vh;
+  background: #0a0a1a;
+  overflow-y: auto;
 }
 
-.sfr-dpad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 60px);
-  grid-template-rows: repeat(3, 60px);
-  gap: 2px;
-}
-
-.sfr-dpad-btn {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  background: rgba(6, 16, 30, 0.75);
-  border: 1.5px solid rgba(88, 211, 255, 0.3);
-  color: #58d3ff;
-  font-size: 1.2rem;
+.admin-header {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.15),
+    rgba(10, 10, 26, 0.95)
+  );
+  border-bottom: 2px solid #ff6b00;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 12px rgba(88, 211, 255, 0.15);
-  transition: background 0.1s;
-  touch-action: none;
-}
-.sfr-dpad-btn:active {
-  background: rgba(88, 211, 255, 0.2);
-  box-shadow: 0 0 18px rgba(88, 211, 255, 0.4);
-}
-.sfr-dpad-center {
-  background: rgba(88, 211, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(88, 211, 255, 0.1);
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-.sfr-action-btns {
-  position: fixed;
-  bottom: 24px;
-  right: 16px;
+.admin-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ff6b00;
+  flex: 1;
+  letter-spacing: 0.05em;
+}
+
+.admin-nav {
   display: flex;
-  flex-direction: column;
   gap: 6px;
-  align-items: flex-end;
-  z-index: 200;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 107, 0, 0.15);
+  -webkit-overflow-scrolling: touch;
 }
 
-.sfr-act-btn {
-  width: 68px;
-  height: 52px;
+.admin-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tab {
+  white-space: nowrap;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.admin-tab.active {
+  background: rgba(255, 107, 0, 0.2);
+  border-color: #ff6b00;
+  color: #ff6b00;
+}
+
+.admin-content {
+  padding: 14px;
+}
+
+.admin-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+  font-family: "Rajdhani", sans-serif;
+  outline: none;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.admin-input:focus {
+  border-color: #ff6b00;
+  background: rgba(255, 107, 0, 0.06);
+}
+
+.admin-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #111122;
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+  font-family: "Rajdhani", sans-serif;
+  outline: none;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.admin-select option {
+  background: #111122;
+}
+
+.match-admin-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.user-admin-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 107, 0, 0.15);
   border-radius: 10px;
-  font-family: "Orbitron", sans-serif;
-  font-size: 0.6rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  touch-action: none;
-  user-select: none;
-  transition: all 0.1s;
-}
-.sfr-act-btn:active {
-  transform: scale(0.93);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.sfr-act-jump {
-  background: rgba(88, 211, 255, 0.18);
-  border: 1.5px solid #58d3ff;
-  color: #58d3ff;
-  box-shadow: 0 0 12px rgba(88, 211, 255, 0.25);
-}
-.sfr-act-attack {
-  background: rgba(255, 68, 68, 0.18);
-  border: 1.5px solid #ff4444;
-  color: #ff4444;
-  box-shadow: 0 0 12px rgba(255, 68, 68, 0.25);
-}
-.sfr-act-interact {
-  background: rgba(68, 255, 136, 0.18);
-  border: 1.5px solid #44ff88;
-  color: #44ff88;
-  box-shadow: 0 0 12px rgba(68, 255, 136, 0.25);
-}
-.sfr-act-slot {
-  background: rgba(255, 221, 68, 0.18);
-  border: 1.5px solid #ffdd44;
-  color: #ffdd44;
-  box-shadow: 0 0 12px rgba(255, 221, 68, 0.25);
-  font-size: 1rem;
+.user-admin-card:hover {
+  border-color: rgba(255, 107, 0, 0.4);
 }
 
-/* Desktop KB hints */
-.sfr-kb-hints {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  font-size: 0.6rem;
-  color: rgba(88, 211, 255, 0.4);
-  letter-spacing: 0.06em;
-  line-height: 1.8;
-  pointer-events: none;
-  z-index: 100;
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #eab308;
+}
+.status-approved {
+  background: rgba(0, 200, 100, 0.15);
+  border: 1px solid rgba(0, 200, 100, 0.4);
+  color: #00c864;
+}
+.status-rejected {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+.status-live {
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #ff6b00;
+}
+.status-waiting {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+}
+.status-full {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+.status-completed {
+  background: rgba(107, 114, 128, 0.15);
+  border: 1px solid rgba(107, 114, 128, 0.4);
+  color: #9ca3af;
 }
 
 /* ================================================================
-   GAME OVER
+   MATCH HISTORY / ROOM CARDS
    ================================================================ */
-.sfr-gameover {
-  position: fixed;
-  inset: 0;
+.match-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.room-id-box {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.1),
+    rgba(10, 10, 26, 0.8)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-id-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: "Rajdhani", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.room-id-value {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.05em;
+}
+
+/* ================================================================
+   BLOCKED SCREEN
+   ================================================================ */
+.blocked-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(6, 16, 30, 0.9);
-  z-index: 300;
-}
-
-.sfr-confetti-canvas {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.sfr-gameover-content {
-  position: relative;
-  z-index: 1;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 3rem 2.5rem;
-  background: rgba(10, 25, 48, 0.92);
-  border: 1px solid rgba(88, 211, 255, 0.3);
-  border-radius: 20px;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 0 60px rgba(88, 211, 255, 0.15);
-  max-width: 420px;
-  width: 90%;
-  animation: sfr-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes sfr-pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.sfr-gameover-trophy {
-  font-size: 4rem;
-  animation: sfr-float 2s ease-in-out infinite;
-}
-
-.sfr-gameover-title {
-  font-family: "Orbitron", sans-serif;
-  font-size: clamp(2rem, 6vw, 3rem);
-  font-weight: 900;
-  color: #58d3ff;
-  letter-spacing: 0.15em;
-  text-shadow: 0 0 30px rgba(88, 211, 255, 0.7);
-}
-
-.sfr-gameover-winner {
-  font-family: "Orbitron", sans-serif;
-  font-size: clamp(1.2rem, 4vw, 1.8rem);
-  font-weight: 900;
-  color: #ffdd44;
-  text-shadow: 0 0 20px rgba(255, 221, 68, 0.5);
-}
-
-.sfr-gameover-sub {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.1em;
-}
-
-.sfr-gameover-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  width: 100%;
-  margin-top: 0.5rem;
+  padding: 20px;
+  background: #0a0a1a;
 }
 
 /* ================================================================
    FOOTER
    ================================================================ */
-.sfr-footer {
-  margin-top: 1.5rem;
-  font-size: 0.65rem;
-  color: rgba(88, 211, 255, 0.3);
+.footer-text {
   text-align: center;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.25);
+  padding: 16px;
+  font-family: "Rajdhani", sans-serif;
 }
-.sfr-footer a {
-  color: rgba(88, 211, 255, 0.6);
-  transition: color 0.15s;
+
+.footer-text a {
+  color: rgba(255, 107, 0, 0.6);
+  text-decoration: none;
 }
-.sfr-footer a:hover {
-  color: #58d3ff;
+
+/* ================================================================
+   NOTIFICATIONS
+   ================================================================ */
+.notif-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 107, 0, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.notif-card.unread {
+  border-color: rgba(255, 107, 0, 0.4);
+  background: rgba(255, 107, 0, 0.06);
+}
+
+.notif-title {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 3px;
+}
+
+.notif-msg {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.notif-time {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: "Rajdhani", sans-serif;
+  margin-top: 4px;
+}
+
+/* ================================================================
+   TRANSACTION HISTORY
+   ================================================================ */
+.tx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: "Rajdhani", sans-serif;
+}
+
+.tx-row:last-child {
+  border-bottom: none;
+}
+
+.tx-type {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tx-amount-pos {
+  color: #00c864;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.tx-amount-neg {
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ================================================================
+   SCROLLBAR
+   ================================================================ */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 0, 0.3);
+  border-radius: 2px;
+}
+
+/* ================================================================
+   LIGHT MODE (optional)
+   ================================================================ */
+body.light-mode {
+  --navy: #f0f0f8;
+  background: #f0f0f8;
+  color: #0a0a1a;
+}
+
+body.light-mode .app-container {
+  background: #f0f0f8;
+}
+
+body.light-mode .auth-page {
+  background: #f0f0f8;
+}
+
+body.light-mode .auth-form {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(255, 107, 0, 0.3);
+}
+
+body.light-mode .fire-input {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0a0a1a;
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+body.light-mode .fire-input::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+body.light-mode .card,
+body.light-mode .mode-card {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .app-header,
+body.light-mode .bottom-nav {
+  background: rgba(240, 240, 248, 0.95);
+}
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.empty-state-text {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ================================================================
+   RULES COLLAPSIBLE
+   ================================================================ */
+.rules-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rules-list li {
+  display: flex;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-family: "Rajdhani", sans-serif;
+  line-height: 1.4;
+}
+
+.rules-num {
+  color: #ff6b00;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.65rem;
+  margin-top: 1px;
+}
+
+/* ================================================================
+   COLOR PICKER
+   ================================================================ */
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.color-swatch.selected {
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
+  transform: scale(1.15);
+}
+
+/* ================================================================
+   CHAT SUPPORT
+   ================================================================ */
+.chat-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.chat-bubble.sent {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.25),
+    rgba(204, 85, 0, 0.2)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.received {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+/* ================================================================
+   ANNOUNCEMENT CARD
+   ================================================================ */
+.announcement-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.08),
+    rgba(10, 10, 26, 0.6)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.announcement-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ff6b00;
+  margin-bottom: 4px;
+}
+
+.announcement-body {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Rajdhani", sans-serif;
+  line-height: 1.4;
 }
