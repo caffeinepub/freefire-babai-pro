@@ -241,6 +241,7 @@ type View =
   | "admin-complaints"
   | "admin-chat"
   | "admin-logs"
+  | "admin-revenue"
   | "payment";
 
 type NavTab =
@@ -2932,78 +2933,10 @@ function DashboardView({
             data-ocid="dashboard.primary_button"
             style={{ padding: 0, overflow: "hidden" }}
           >
-            <div
-              style={{
-                position: "relative",
-                height: 80,
-                overflow: "hidden",
-                borderRadius: "13px 13px 0 0",
-              }}
-            >
-              {(mode as typeof mode & { poster?: string }).poster ? (
-                <img
-                  src={(mode as typeof mode & { poster?: string }).poster}
-                  alt={mode.label}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    background: "linear-gradient(135deg, #1a0e00, #0e1420)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "2rem",
-                  }}
-                >
-                  {mode.emoji}
-                </div>
-              )}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(to bottom, transparent 30%, rgba(8,12,20,0.92) 100%)",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  top: 5,
-                  right: 5,
-                  background: "rgba(255,107,0,0.85)",
-                  color: "white",
-                  fontSize: "0.58rem",
-                  fontWeight: 700,
-                  fontFamily: "Orbitron, sans-serif",
-                  padding: "2px 6px",
-                  borderRadius: 12,
-                  backdropFilter: "blur(4px)",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                ₹{mode.entryFee}
-              </div>
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 4,
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  fontSize: "0.85rem",
-                }}
-              >
-                {mode.emoji}
-              </div>
+            <div className={`mode-poster-css mode-poster-${mode.id}`}>
+              <div className="mode-poster-entry-badge">₹{mode.entryFee}</div>
+              <div className="mode-poster-emoji">{mode.emoji}</div>
+              <div className="mode-poster-text">{mode.label.toUpperCase()}</div>
             </div>
             <div
               style={{
@@ -6714,6 +6647,7 @@ type AdminView =
   | "admin-complaints"
   | "admin-chat"
   | "admin-logs"
+  | "admin-revenue"
   | "payment";
 
 interface AdminLogEntry {
@@ -6761,6 +6695,7 @@ function AdminLayout({
 }) {
   const tabs: { id: AdminView; label: string; emoji: string }[] = [
     { id: "admin-dashboard", label: "Dashboard", emoji: "📊" },
+    { id: "admin-revenue", label: "Revenue", emoji: "💰" },
     { id: "admin-users", label: "Users", emoji: "👥" },
     { id: "admin-matches", label: "Matches", emoji: "⚔️" },
     { id: "admin-payments", label: "Payments", emoji: "💸" },
@@ -6895,8 +6830,265 @@ function AdminLayout({
           <AdminChatView showToast={showToast} setIsLoading={setIsLoading} />
         )}
         {view === "admin-logs" && <AdminLogsView setIsLoading={setIsLoading} />}
+        {view === "admin-revenue" && (
+          <AdminRevenueView showToast={showToast} setIsLoading={setIsLoading} />
+        )}
       </div>
     </motion.div>
+  );
+}
+
+// ─── Admin Revenue View ────────────────────────────────────────────────────────
+function AdminRevenueView({
+  showToast: _showToast,
+  setIsLoading,
+}: {
+  showToast: (msg: string, type?: "success" | "error") => void;
+  setIsLoading: (v: boolean) => void;
+}) {
+  const [revenue, setRevenue] = useState({
+    totalEntryFees: 0,
+    totalPrizesAwarded: 0,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    matchCount: 0,
+    completedMatches: 0,
+  });
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      try {
+        const [matchSnap, paymentsSnap, withdrawSnap] = await Promise.all([
+          getDocs(collection(db, "matches")),
+          getDocs(collection(db, "payments")),
+          getDocs(collection(db, "withdraw")),
+        ]);
+
+        // Sum entry fees from all non-cancelled matches
+        let totalEntryFees = 0;
+        let totalPrizesAwarded = 0;
+        let completedMatches = 0;
+        for (const d of matchSnap.docs) {
+          const data = d.data();
+          const entryFee = data.entryFee || 0;
+          const players = data.players || [];
+          // Entry fees collected = entryFee * number of players
+          totalEntryFees += entryFee * (players.length || 1);
+          if (data.status === "completed") {
+            completedMatches++;
+            // Prize paid = 90% of prizePool (10% kept as admin profit)
+            const prizePool = data.prizePool || 0;
+            totalPrizesAwarded += Math.floor(prizePool * 0.9);
+          }
+        }
+
+        // Total deposits approved
+        const totalDeposits = paymentsSnap.docs
+          .filter((d) => d.data().status === "Approved")
+          .reduce((sum, d) => sum + (d.data().amount || 0), 0);
+        // Total withdrawals approved
+        const totalWithdrawals = withdrawSnap.docs
+          .filter((d) => d.data().status === "Approved")
+          .reduce((sum, d) => sum + (d.data().amount || 0), 0);
+
+        setRevenue({
+          totalEntryFees,
+          totalPrizesAwarded,
+          totalDeposits,
+          totalWithdrawals,
+          matchCount: matchSnap.size,
+          completedMatches,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [setIsLoading]);
+
+  const netProfit = revenue.totalEntryFees - revenue.totalPrizesAwarded;
+  const profitFromDeposits = Math.floor(revenue.totalDeposits * 0.1);
+  const totalNetProfit = netProfit + profitFromDeposits;
+
+  return (
+    <div data-ocid="admin.revenue.section">
+      <div
+        style={{
+          fontFamily: "Orbitron, sans-serif",
+          fontWeight: 900,
+          fontSize: "1.1rem",
+          color: "var(--accent)",
+          marginBottom: 16,
+          letterSpacing: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        💰 REVENUE & PROFIT
+      </div>
+
+      {/* Big profit card */}
+      <div
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(0,200,100,0.15), rgba(0,160,80,0.08))",
+          border: "2px solid rgba(0,200,100,0.4)",
+          borderRadius: 20,
+          padding: "24px 20px",
+          marginBottom: 16,
+          textAlign: "center",
+          boxShadow: "0 0 30px rgba(0,200,100,0.15)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.8rem",
+            color: "rgba(255,255,255,0.6)",
+            fontFamily: "Rajdhani",
+            letterSpacing: 2,
+            marginBottom: 8,
+          }}
+        >
+          NET PROFIT (ADMIN KEEPS)
+        </div>
+        <div
+          style={{
+            fontFamily: "Orbitron, sans-serif",
+            fontSize: "2.8rem",
+            fontWeight: 900,
+            color: "#00c864",
+            textShadow: "0 0 20px rgba(0,200,100,0.5)",
+            lineHeight: 1,
+          }}
+        >
+          ₹{totalNetProfit > 0 ? totalNetProfit : 0}
+        </div>
+        <div
+          style={{
+            fontSize: "0.72rem",
+            color: "rgba(255,255,255,0.45)",
+            marginTop: 8,
+            fontFamily: "Rajdhani",
+          }}
+        >
+          10% commission on all prizes + deposit fees
+        </div>
+      </div>
+
+      {/* Revenue breakdown */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        {[
+          {
+            label: "Total Entry Fees",
+            value: `₹${revenue.totalEntryFees}`,
+            color: "#3b82f6",
+            icon: "🎮",
+          },
+          {
+            label: "Prizes Paid Out (90%)",
+            value: `₹${revenue.totalPrizesAwarded}`,
+            color: "#f59e0b",
+            icon: "🏆",
+          },
+          {
+            label: "Total Deposits",
+            value: `₹${revenue.totalDeposits}`,
+            color: "#8b5cf6",
+            icon: "💸",
+          },
+          {
+            label: "Total Withdrawals",
+            value: `₹${revenue.totalWithdrawals}`,
+            color: "#ef4444",
+            icon: "💰",
+          },
+          {
+            label: "Total Matches",
+            value: revenue.matchCount,
+            color: "var(--accent)",
+            icon: "⚔️",
+          },
+          {
+            label: "Completed Matches",
+            value: revenue.completedMatches,
+            color: "#22c55e",
+            icon: "✅",
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border-color)",
+              borderRadius: 12,
+              padding: "14px 12px",
+            }}
+          >
+            <div style={{ fontSize: "1.2rem", marginBottom: 4 }}>
+              {card.icon}
+            </div>
+            <div
+              style={{
+                fontFamily: "Orbitron",
+                fontSize: "1.1rem",
+                fontWeight: 800,
+                color: card.color,
+              }}
+            >
+              {card.value}
+            </div>
+            <div
+              style={{
+                fontSize: "0.68rem",
+                color: "var(--muted)",
+                fontFamily: "Rajdhani",
+                marginTop: 2,
+              }}
+            >
+              {card.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Profit protection note */}
+      <div
+        style={{
+          background: "rgba(255,107,0,0.08)",
+          border: "1px solid rgba(255,107,0,0.3)",
+          borderRadius: 12,
+          padding: "14px 16px",
+          fontSize: "0.8rem",
+          color: "rgba(255,255,255,0.7)",
+          fontFamily: "Rajdhani",
+          lineHeight: 1.6,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            color: "var(--accent)",
+            marginBottom: 6,
+            fontFamily: "Orbitron",
+            fontSize: "0.78rem",
+          }}
+        >
+          🛡️ ZERO LOSS GUARANTEE
+        </div>
+        • Winners receive 90% of prize pool — you keep 10%
+        <br />• Total entry fees always exceed 90% of prize pool
+        <br />• Admin profit is automatic and guaranteed every match
+        <br />• No refunds reduce your commission margin
+      </div>
+    </div>
   );
 }
 
@@ -7935,13 +8127,20 @@ function AdminMatchesView({
       }
       await Promise.all(killOps);
 
-      const winnerPrize = winnerBonus > 0 ? winnerBonus : m.prizePool;
+      // Admin keeps 10% commission — winner gets 90% of prize pool
+      const rawPrize = winnerBonus > 0 ? winnerBonus : m.prizePool;
+      const winnerPrize = Math.floor(rawPrize * 0.9);
       const snap = await getDoc(doc(db, "wallet", winner));
       const cur = snap.exists() ? snap.data().coins || 0 : 0;
       const winnerSnap = await getDoc(doc(db, "users", winner));
       await Promise.all([
         setDoc(doc(db, "wallet", winner), { coins: cur + winnerPrize }),
-        updateDoc(doc(db, "matches", m.id), { winner, status: "completed" }),
+        updateDoc(doc(db, "matches", m.id), {
+          winner,
+          status: "completed",
+          prizeAwarded: winnerPrize,
+          adminCommission: rawPrize - winnerPrize,
+        }),
         ...(winnerSnap.exists()
           ? [
               updateDoc(doc(db, "users", winner), {
@@ -7999,7 +8198,9 @@ function AdminMatchesView({
         setIsLoading(false);
         return;
       }
-      const prize = m.prizePool || 200;
+      const rawTeamPrize = m.prizePool || 200;
+      // Admin keeps 10% commission — team leader gets 90%
+      const prize = Math.floor(rawTeamPrize * 0.9);
       const snap = await getDoc(doc(db, "wallet", teamLeader));
       const cur = snap.exists() ? snap.data().coins || 0 : 0;
       const leaderSnap = await getDoc(doc(db, "users", teamLeader));
@@ -8008,6 +8209,8 @@ function AdminMatchesView({
         updateDoc(doc(db, "matches", m.id), {
           winner: `Team ${team} (Leader: ${teamLeader})`,
           status: "completed",
+          prizeAwarded: prize,
+          adminCommission: rawTeamPrize - prize,
         }),
         ...(leaderSnap.exists()
           ? [

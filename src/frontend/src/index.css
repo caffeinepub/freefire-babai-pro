@@ -2309,3 +2309,201 @@ body.light-mode .notif-item.unread {
   background: rgba(255, 107, 0, 0.05);
   border-color: rgba(255, 107, 0, 0.25);
 }
+
+/* ================================================================
+   INLINE CSS POSTER CARDS — Mode-specific cinematic gradients
+   ================================================================ */
+.mode-poster-css {
+  position: relative;
+  height: 90px;
+  overflow: hidden;
+  border-radius: 13px 13px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.mode-poster-entry-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 107, 0, 0.92);
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.mode-poster-emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+  z-index: 2;
+}
+
+.mode-poster-text {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+
+/* ── 1v1: Red fire gradient ── */
+.mode-poster-1v1 {
+  background: linear-gradient(
+    135deg,
+    #7b0000 0%,
+    #d43000 40%,
+    #ff6b00 70%,
+    #ff9500 100%
+  );
+}
+.mode-poster-1v1::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cellipse cx='40' cy='60' rx='30' ry='8' fill='rgba(255,100,0,0.2)'/%3E%3C/svg%3E")
+    center / cover no-repeat;
+  opacity: 0.5;
+}
+
+/* ── 2v2: Purple-magenta ── */
+.mode-poster-2v2 {
+  background: linear-gradient(
+    135deg,
+    #2d0057 0%,
+    #6b00a0 45%,
+    #9f00e0 75%,
+    #d400ff 100%
+  );
+}
+
+/* ── Squad 4v4: Dark military blue ── */
+.mode-poster-squad {
+  background: linear-gradient(
+    135deg,
+    #001a3d 0%,
+    #003080 40%,
+    #0055c8 70%,
+    #1e8bff 100%
+  );
+}
+
+/* ── Clash Squad: Fire explosion ── */
+.mode-poster-clash {
+  background: linear-gradient(
+    135deg,
+    #4a0000 0%,
+    #c41000 35%,
+    #ff3800 60%,
+    #ffaa00 100%
+  );
+}
+
+/* ── BR Solo: Dark forest ── */
+.mode-poster-br-solo {
+  background: linear-gradient(
+    135deg,
+    #001a00 0%,
+    #004010 40%,
+    #006020 65%,
+    #00a040 100%
+  );
+}
+
+/* ── BR Duo: Navy teal ── */
+.mode-poster-br-duo {
+  background: linear-gradient(
+    135deg,
+    #00102a 0%,
+    #003070 40%,
+    #006090 65%,
+    #00a0c0 100%
+  );
+}
+
+/* ── BR Squad: Red-black army ── */
+.mode-poster-br-squad {
+  background: linear-gradient(
+    135deg,
+    #1a0000 0%,
+    #3d0000 35%,
+    #800010 60%,
+    #cc2020 100%
+  );
+}
+
+/* ── High Stakes: Gold-black premium ── */
+.mode-poster-highstakes {
+  background: linear-gradient(
+    135deg,
+    #1a1000 0%,
+    #3d2c00 35%,
+    #806000 60%,
+    #c8a000 80%,
+    #ffd700 100%
+  );
+}
+
+/* Poster overlay shimmer */
+.mode-poster-css::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+/* ================================================================
+   ENHANCED FIRE BUTTON — More vivid, premium glow
+   ================================================================ */
+.fire-btn {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8800 50%, #ff9500 100%) !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.45), 0 0 0 0 rgba(255, 107, 0, 0) !important;
+  transition: all 0.2s ease !important;
+}
+
+.fire-btn:hover {
+  background: linear-gradient(135deg, #ff7a10 0%, #ff9500 50%, #ffaa00 100%) !important;
+  box-shadow: 0 6px 24px rgba(255, 107, 0, 0.6), 0 0 12px rgba(255, 150, 0, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* ================================================================
+   CLEAN CARDS — Glassmorphism consistent upgrade
+   ================================================================ */
+.stat-card,
+.list-item,
+.badge-box {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 107, 0, 0.18);
+}
+
+/* ================================================================
+   ADMIN REVENUE HIGHLIGHT
+   ================================================================ */
+.revenue-profit-highlight {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 200, 100, 0.12),
+    rgba(0, 120, 60, 0.08)
+  );
+  border: 2px solid rgba(0, 200, 100, 0.35);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
