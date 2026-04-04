@@ -285,6 +285,15 @@ interface MatchData {
   startedAt?: number;
   players?: string[];
   maxPlayers?: number;
+  // Feature 106: Custom title
+  customTitle?: string;
+  // Feature 102: Voice link
+  voiceLink?: string;
+  // Feature 107: Visibility
+  isVisible?: boolean;
+  // Feature 105: Replay info
+  prizeAwarded?: number;
+  winner?: string;
 }
 
 interface PaymentData {
@@ -3284,6 +3293,9 @@ function MatchJoinModal({
   >([]);
   const [_adminRoomId, setAdminRoomId] = useState<string | null>(null);
   const [liveEntryFee, setLiveEntryFee] = useState(mode.entryFee);
+  // Feature 109: Late join warning
+  const [showLateWarning, setShowLateWarning] = useState(false);
+  const [_pendingJoin, _setPendingJoin] = useState(false);
 
   useEffect(() => {
     // Load live entry fee from Firestore settings for team modes
@@ -3387,7 +3399,11 @@ function MatchJoinModal({
           where("player", "==", "admin"),
         );
         const roomSnap = await getDocs(roomQ);
-        if (roomSnap.empty) {
+        // Feature 107: filter out hidden rooms
+        const visibleRooms = roomSnap.docs.filter(
+          (d) => (d.data() as any).isVisible !== false,
+        );
+        if (visibleRooms.length === 0) {
           showToast(
             "No room open right now. Wait for admin to create one.",
             "error",
@@ -3395,7 +3411,7 @@ function MatchJoinModal({
           setIsLoading(false);
           return;
         }
-        const roomDoc = roomSnap.docs[0];
+        const roomDoc = visibleRooms[0];
         const roomData = roomDoc.data();
         const teamKey = selectedTeam === "A" ? "teamA" : "teamB";
         const existingTeam: string[] = roomData[teamKey] || [];
@@ -3453,9 +3469,13 @@ function MatchJoinModal({
         );
         const roomSnap = await getDocs(roomQ);
         const maxP = mode.maxPlayers ?? 2;
+        // Feature 107: filter visible rooms
+        const visibleRoomDocs = roomSnap.docs.filter(
+          (d) => (d.data() as any).isVisible !== false,
+        );
 
-        if (!roomSnap.empty) {
-          const roomDoc = roomSnap.docs[0];
+        if (visibleRoomDocs.length > 0) {
+          const roomDoc = visibleRoomDocs[0];
           const roomData = roomDoc.data();
           const existingPlayers: string[] = roomData.players ?? [];
           if (existingPlayers.includes(currentUser)) {
@@ -3480,6 +3500,14 @@ function MatchJoinModal({
               roomPass: roomData.roomPass || "",
               timestamp: new Date(),
               roomRef: roomDoc.id,
+              // Feature 102: Pass voiceLink from admin room
+              ...(roomData.voiceLink ? { voiceLink: roomData.voiceLink } : {}),
+              // Feature 106: Pass customTitle
+              ...(roomData.customTitle
+                ? { customTitle: roomData.customTitle }
+                : {}),
+              // Feature 108: Store join order info
+              maxPlayers: roomData.maxPlayers || mode.maxPlayers || 2,
             }),
             setDoc(doc(db, "wallet", currentUser), {
               coins: coins - mode.entryFee,
@@ -3936,10 +3964,117 @@ function MatchJoinModal({
             <span style={{ color: "var(--danger)" }}> (Insufficient)</span>
           )}
         </div>
+        {/* Feature 109: Late Join Warning */}
+        {showLateWarning && (
+          <div
+            style={{
+              background: "rgba(239,68,68,0.15)",
+              border: "2px solid rgba(239,68,68,0.5)",
+              borderRadius: 12,
+              padding: "14px",
+              marginBottom: 12,
+              textAlign: "center",
+            }}
+            data-ocid="match.modal.dialog"
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>⚠️</div>
+            <div
+              style={{
+                fontWeight: 700,
+                color: "#f87171",
+                marginBottom: 6,
+                fontSize: "0.9rem",
+              }}
+            >
+              Late Join Warning!
+            </div>
+            <div
+              style={{
+                color: "var(--muted)",
+                fontSize: "0.78rem",
+                marginBottom: 10,
+              }}
+            >
+              You are joining less than 5 minutes before match time. Your entry
+              fee may be forfeited if you miss the match.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="fire-btn"
+                onClick={() => {
+                  setShowLateWarning(false);
+                  _setPendingJoin(false);
+                  vibrate([30]);
+                  playClickSound();
+                  join();
+                }}
+                data-ocid="match.modal.confirm_button"
+                style={{
+                  flex: 1,
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(90deg,#ef4444,#dc2626)",
+                }}
+              >
+                Continue Anyway
+              </button>
+              <button
+                type="button"
+                className="fire-btn fire-btn-secondary"
+                onClick={() => setShowLateWarning(false)}
+                data-ocid="match.modal.cancel_button"
+                style={{ flex: 1, fontSize: "0.82rem" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         <button
           type="button"
           className="fire-btn"
           onClick={() => {
+            // Feature 109: Check if within 5 minutes of a match slot
+            const now = new Date();
+            const nowMins = now.getHours() * 60 + now.getMinutes();
+            const matchSlots = [
+              17 * 60,
+              17 * 60 + 15,
+              17 * 60 + 30,
+              17 * 60 + 45,
+              18 * 60,
+              18 * 60 + 15,
+              18 * 60 + 30,
+              18 * 60 + 45,
+              19 * 60,
+              19 * 60 + 15,
+              19 * 60 + 30,
+              19 * 60 + 45,
+              20 * 60,
+              20 * 60 + 15,
+              20 * 60 + 30,
+              20 * 60 + 45,
+              21 * 60,
+              21 * 60 + 15,
+              21 * 60 + 30,
+              21 * 60 + 45,
+              22 * 60,
+              22 * 60 + 15,
+              22 * 60 + 30,
+              22 * 60 + 45,
+              23 * 60,
+            ];
+            const nextSlot = matchSlots.find((t) => t >= nowMins);
+            if (
+              nextSlot !== undefined &&
+              nextSlot - nowMins < 5 &&
+              nextSlot - nowMins >= 0 &&
+              !_pendingJoin
+            ) {
+              setShowLateWarning(true);
+              return;
+            }
             vibrate([30]);
             playClickSound();
             join();
@@ -4257,6 +4392,8 @@ function MatchHistoryView({
 }) {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Feature 105: Replay modal
+  const [replayMatch, setReplayMatch] = useState<MatchData | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -4363,6 +4500,23 @@ function MatchHistoryView({
                     fontSize: "0.9rem",
                   }}
                 >
+                  {/* Feature 106: Custom Title */}
+                  {(m as any).customTitle && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        background: "linear-gradient(90deg,#f59e0b,#ff6b00)",
+                        color: "#000",
+                        fontSize: "0.6rem",
+                        fontWeight: 800,
+                        padding: "1px 5px",
+                        borderRadius: 4,
+                        marginRight: 5,
+                      }}
+                    >
+                      {(m as any).customTitle}
+                    </span>
+                  )}
                   {m.mode?.toUpperCase()}
                 </span>
                 <span className={`badge ${statusClass(m.status)}`}>
@@ -4479,8 +4633,142 @@ function MatchHistoryView({
                 currentUser={currentUser}
               />
             )}
+            {/* Feature 102: Voice Channel */}
+            {(m.status === "waiting" || m.status === "live") &&
+              (m as any).voiceLink && (
+                <a
+                  href={(m as any).voiceLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    marginTop: 6,
+                    padding: "5px 10px",
+                    background:
+                      "linear-gradient(90deg, rgba(34,197,94,0.15), rgba(22,163,74,0.1))",
+                    border: "1px solid rgba(34,197,94,0.35)",
+                    borderRadius: 8,
+                    color: "#86efac",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                  data-ocid="matches.voice.link"
+                >
+                  🎙️ Join Voice Channel
+                </a>
+              )}
+            {/* Feature 103: Auto-Start Countdown */}
+            {(m.status === "waiting" || m.status === "full") &&
+              (m as any).roomRef &&
+              (m as any).maxPlayers && (
+                <AutoStartCountdown
+                  matchId={(m as any).roomRef}
+                  maxPlayers={(m as any).maxPlayers || 2}
+                />
+              )}
+            {/* Feature 104: Side Bet */}
+            {(m.status === "waiting" || m.status === "live") && (
+              <SideBetPanel
+                matchId={(m as any).roomRef || m.id}
+                currentUser={currentUser}
+                joinedPlayers={(m as any).players || [currentUser]}
+                coins={_coins || 0}
+                showToast={showToast}
+              />
+            )}
+            {/* Feature 106: Custom Title display in player view */}
+            {(m as any).customTitle && (
+              <div
+                style={{
+                  marginTop: 4,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background:
+                    "linear-gradient(90deg, rgba(245,158,11,0.2), rgba(255,107,0,0.1))",
+                  border: "1px solid rgba(245,158,11,0.35)",
+                  borderRadius: 6,
+                  padding: "2px 8px",
+                  fontSize: "0.68rem",
+                  color: "#fcd34d",
+                  fontWeight: 700,
+                }}
+              >
+                🏷️ {(m as any).customTitle}
+              </div>
+            )}
+            {/* Feature 110 + 105: Action buttons row */}
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                marginTop: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {/* Feature 110: Share Match */}
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `🎮 Join MR.SONIC FF Match!\n📌 Mode: ${m.mode?.toUpperCase()}\n🏆 Prize: ₹${m.prizePool}\n⏰ Time: Today 5PM-11PM\n💥 Download & Play: https://mrsonic.app\n\nUse code: ${m.id}`;
+                  navigator.clipboard
+                    .writeText(text)
+                    .then(() =>
+                      showToast("📤 Match link copied! Share with friends."),
+                    );
+                  vibrate([30]);
+                }}
+                style={{
+                  background: "none",
+                  border: "1px solid rgba(59,130,246,0.4)",
+                  borderRadius: 8,
+                  padding: "4px 10px",
+                  color: "#93c5fd",
+                  fontSize: "0.68rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+                data-ocid="matches.share.secondary_button"
+              >
+                📤 Share
+              </button>
+              {/* Feature 105: Replay button (completed matches) */}
+              {m.status === "completed" && (
+                <button
+                  type="button"
+                  onClick={() => setReplayMatch(m)}
+                  style={{
+                    background: "none",
+                    border: "1px solid rgba(168,85,247,0.4)",
+                    borderRadius: 8,
+                    padding: "4px 10px",
+                    color: "#c4b5fd",
+                    fontSize: "0.68rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                  data-ocid="matches.replay.secondary_button"
+                >
+                  📋 Replay
+                </button>
+              )}
+            </div>
           </div>
         ))
+      )}
+      {/* Feature 105: Replay Modal */}
+      {replayMatch && (
+        <ReplaySummaryModal
+          match={replayMatch as any}
+          onClose={() => setReplayMatch(null)}
+        />
       )}
       <Footer />
     </motion.div>
@@ -6056,7 +6344,35 @@ function ReportProblemView({
   );
 }
 
-// ─── Match Lobby Chat ──────────────────────────────────────────────────────
+// ─── Match Lobby Chat (Feature 101: Upgraded) ────────────────────────────────
+// Avatar color palette for chat initials
+const AVATAR_COLORS = [
+  "#ff6b00",
+  "#8b5cf6",
+  "#06b6d4",
+  "#22c55e",
+  "#f59e0b",
+  "#ec4899",
+  "#3b82f6",
+  "#ef4444",
+];
+function getAvatarColor(uid: string): string {
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++)
+    hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+function formatChatTime(ts: unknown): string {
+  if (!ts) return "";
+  let d: Date;
+  if (ts instanceof Date) d = ts;
+  else if (typeof ts === "object" && ts !== null && "seconds" in (ts as any)) {
+    d = new Date((ts as any).seconds * 1000);
+  } else if (typeof ts === "number") d = new Date(ts);
+  else return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function MatchLobbyChat({
   matchId,
   currentUser,
@@ -6072,18 +6388,43 @@ function MatchLobbyChat({
   >([]);
   const [chatInput, setChatInput] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!showChat) return;
     const q = query(
       collection(db, "matchChats", matchId, "messages"),
       orderBy("timestamp", "asc"),
     );
     const unsub = onSnapshot(q, (snap) => {
-      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any));
+      const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as any);
+      setMessages(msgs);
+      if (!showChat) {
+        // Count new messages from others while chat is hidden
+        const fromOthers = msgs.filter(
+          (m: any) => m.uid !== currentUser,
+        ).length;
+        setUnreadCount(Math.max(0, fromOthers - lastSeenCount));
+      }
     });
     return () => unsub();
-  }, [matchId, showChat]);
+  }, [matchId, showChat, currentUser, lastSeenCount]);
+
+  // Auto-scroll to bottom when new messages arrive
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message change
+  useEffect(() => {
+    if (showChat && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length, showChat]);
+
+  const openChat = () => {
+    setShowChat(true);
+    const fromOthers = messages.filter((m) => m.uid !== currentUser).length;
+    setLastSeenCount(fromOthers);
+    setUnreadCount(0);
+  };
 
   const sendChatMsg = async () => {
     if (!chatInput.trim()) return;
@@ -6103,7 +6444,7 @@ function MatchLobbyChat({
     <div style={{ marginTop: 8 }}>
       <button
         type="button"
-        onClick={() => setShowChat(!showChat)}
+        onClick={() => (showChat ? setShowChat(false) : openChat())}
         style={{
           background: "none",
           border: "1px solid rgba(255,107,0,0.3)",
@@ -6115,11 +6456,34 @@ function MatchLobbyChat({
           display: "flex",
           alignItems: "center",
           gap: 5,
+          position: "relative",
         }}
         data-ocid="matches.chat.toggle"
       >
         <MessageSquare size={12} />
         {showChat ? "Hide" : "Show"} Lobby Chat
+        {!showChat && unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              background: "#ef4444",
+              color: "#fff",
+              borderRadius: "50%",
+              minWidth: 16,
+              height: 16,
+              fontSize: "0.6rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              padding: "0 3px",
+            }}
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </button>
       {showChat && (
         <div
@@ -6129,7 +6493,7 @@ function MatchLobbyChat({
             border: "1px solid rgba(255,107,0,0.2)",
             borderRadius: 10,
             padding: "10px",
-            maxHeight: 180,
+            maxHeight: 220,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -6148,53 +6512,110 @@ function MatchLobbyChat({
                 No messages yet. Say hi! 👋
               </div>
             ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    justifyContent:
-                      m.uid === currentUser ? "flex-end" : "flex-start",
-                    marginBottom: 4,
-                  }}
-                >
+              messages.map((m) => {
+                const isOwn = m.uid === currentUser;
+                const avatarColor = getAvatarColor(m.uid);
+                const initial = (m.uid || "?")[0].toUpperCase();
+                return (
                   <div
+                    key={m.id}
                     style={{
-                      maxWidth: "75%",
-                      background:
-                        m.uid === currentUser
-                          ? "rgba(255,107,0,0.2)"
-                          : "rgba(255,255,255,0.06)",
-                      border:
-                        m.uid === currentUser
-                          ? "1px solid rgba(255,107,0,0.4)"
-                          : "1px solid rgba(255,255,255,0.1)",
-                      borderRadius:
-                        m.uid === currentUser
-                          ? "10px 10px 2px 10px"
-                          : "10px 10px 10px 2px",
-                      padding: "5px 9px",
-                      fontSize: "0.75rem",
-                      color: "var(--text)",
+                      display: "flex",
+                      justifyContent: isOwn ? "flex-end" : "flex-start",
+                      alignItems: "flex-end",
+                      gap: 6,
+                      marginBottom: 6,
                     }}
                   >
-                    {m.uid !== currentUser && (
+                    {!isOwn && (
                       <div
                         style={{
-                          color: "#ff9a00",
-                          fontSize: "0.62rem",
-                          fontWeight: 700,
-                          marginBottom: 1,
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          background: avatarColor,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.6rem",
+                          fontWeight: 800,
+                          color: "#fff",
+                          flexShrink: 0,
+                          marginBottom: 2,
                         }}
                       >
-                        {m.uid}
+                        {initial}
                       </div>
                     )}
-                    {m.message}
+                    <div style={{ maxWidth: "72%" }}>
+                      {!isOwn && (
+                        <div
+                          style={{
+                            color: avatarColor,
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            marginBottom: 2,
+                            paddingLeft: 2,
+                          }}
+                        >
+                          {m.uid}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          background: isOwn
+                            ? "rgba(255,107,0,0.2)"
+                            : "rgba(255,255,255,0.06)",
+                          border: isOwn
+                            ? "1px solid rgba(255,107,0,0.4)"
+                            : "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: isOwn
+                            ? "10px 10px 2px 10px"
+                            : "10px 10px 10px 2px",
+                          padding: "5px 9px",
+                          fontSize: "0.75rem",
+                          color: "var(--text)",
+                        }}
+                      >
+                        {m.message}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.55rem",
+                          color: "rgba(255,255,255,0.3)",
+                          marginTop: 2,
+                          textAlign: isOwn ? "right" : "left",
+                          paddingLeft: 2,
+                        }}
+                      >
+                        {formatChatTime(m.timestamp)}
+                      </div>
+                    </div>
+                    {isOwn && (
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          background: avatarColor,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "0.6rem",
+                          fontWeight: 800,
+                          color: "#fff",
+                          flexShrink: 0,
+                          marginBottom: 2,
+                        }}
+                      >
+                        {initial}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
+            <div ref={messagesEndRef} />
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <input
@@ -6772,6 +7193,14 @@ interface AdminMatchData extends MatchData {
   teamALeader?: string;
   teamBLeader?: string;
   squadEntryTotal?: number;
+  // Feature 106: Custom title
+  customTitle?: string;
+  // Feature 102: Voice channel
+  voiceLink?: string;
+  // Feature 107: Visibility
+  isVisible?: boolean;
+  // Feature 105: Prize info
+  prizeAwarded?: number;
 }
 
 async function logAdminAction(action: string, target = "") {
@@ -8045,6 +8474,10 @@ function AdminMatchesView({
   const [clashPrizePool, setClashPrizePool] = useState(200);
   const [squadEntryTotal, setSquadEntryTotal] = useState(400);
   const [squadPrizePool, setSquadPrizePool] = useState(720);
+  // Feature 106: Custom Match Title
+  const [newCustomTitle, setNewCustomTitle] = useState("");
+  // Feature 102: Voice Channel Link
+  const [newVoiceLink, setNewVoiceLink] = useState("");
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -8100,6 +8533,14 @@ function AdminMatchesView({
         ...(isTeamMode
           ? { teamA: [], teamB: [], teamALeader: "", teamBLeader: "" }
           : {}),
+        // Feature 106: Custom Title
+        ...(newCustomTitle.trim()
+          ? { customTitle: newCustomTitle.trim() }
+          : {}),
+        // Feature 102: Voice Channel Link
+        ...(newVoiceLink.trim() ? { voiceLink: newVoiceLink.trim() } : {}),
+        // Feature 107: Visibility (default true)
+        isVisible: true,
       });
       // Save clash squad settings to Firestore for users to see
       if (isTeamMode) {
@@ -8113,6 +8554,8 @@ function AdminMatchesView({
       await logAdminAction("Created match", mode.id);
       showToast("Match created!");
       setCreating(false);
+      setNewCustomTitle("");
+      setNewVoiceLink("");
       load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -8400,6 +8843,19 @@ function AdminMatchesView({
       showToast(`Error: ${msg}`, "error");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Feature 107: Toggle match visibility
+  const toggleVisibility = async (id: string, currentVisible: boolean) => {
+    try {
+      await updateDoc(doc(db, "matches", id), { isVisible: !currentVisible });
+      showToast(
+        currentVisible ? "Match hidden from players" : "Match shown to players",
+      );
+      load();
+    } catch (_) {
+      showToast("Error updating visibility", "error");
     }
   };
 
@@ -8718,6 +9174,46 @@ function AdminMatchesView({
           );
         })()}
 
+        {/* Feature 106: Custom Title Input */}
+        <div style={{ marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--muted)",
+              marginBottom: 4,
+            }}
+          >
+            🏷️ Custom Title (optional, e.g. "Sunday Special")
+          </div>
+          <input
+            className="fire-input"
+            placeholder="e.g. Sunday Special, Night Tournament..."
+            value={newCustomTitle}
+            onChange={(e) => setNewCustomTitle(e.target.value)}
+            style={{ fontSize: "0.85rem" }}
+            data-ocid="admin.matches.title.input"
+          />
+        </div>
+        {/* Feature 102: Voice Channel Link */}
+        <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--muted)",
+              marginBottom: 4,
+            }}
+          >
+            🎙️ Voice Channel Link (optional WhatsApp group)
+          </div>
+          <input
+            className="fire-input"
+            placeholder="https://chat.whatsapp.com/..."
+            value={newVoiceLink}
+            onChange={(e) => setNewVoiceLink(e.target.value)}
+            style={{ fontSize: "0.85rem" }}
+            data-ocid="admin.matches.voice.input"
+          />
+        </div>
         <button
           type="button"
           className="fire-btn"
@@ -8796,7 +9292,41 @@ function AdminMatchesView({
                   color: "#ffffff",
                 }}
               >
+                {/* Feature 106: Custom Title Badge */}
+                {(m as any).customTitle && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      background: "linear-gradient(90deg, #f59e0b, #ff6b00)",
+                      color: "#000",
+                      fontSize: "0.6rem",
+                      fontWeight: 800,
+                      padding: "1px 6px",
+                      borderRadius: 4,
+                      marginRight: 6,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {(m as any).customTitle}
+                  </span>
+                )}
                 {m.mode?.toUpperCase()}
+                {/* Feature 107: Hidden badge */}
+                {(m as any).isVisible === false && (
+                  <span
+                    style={{
+                      marginLeft: 6,
+                      fontSize: "0.6rem",
+                      background: "rgba(239,68,68,0.2)",
+                      color: "#f87171",
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    HIDDEN
+                  </span>
+                )}
               </div>
               <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
                 {m.player} | ₹{m.entryFee} / 🏆₹{m.prizePool}
@@ -8858,12 +9388,26 @@ function AdminMatchesView({
                     >
                       <span
                         style={{
-                          color: "#f59e0b",
+                          color:
+                            idx === 0
+                              ? "#ffd700"
+                              : idx === 1
+                                ? "#c0c0c0"
+                                : idx === 2
+                                  ? "#cd7f32"
+                                  : "#f59e0b",
                           fontWeight: 700,
-                          minWidth: 18,
+                          minWidth: 22,
+                          fontSize: "0.8rem",
                         }}
                       >
-                        #{idx + 1}
+                        {idx === 0
+                          ? "🥇"
+                          : idx === 1
+                            ? "🥈"
+                            : idx === 2
+                              ? "🥉"
+                              : `#${idx + 1}`}
                       </span>
                       <span
                         style={{
@@ -8894,6 +9438,37 @@ function AdminMatchesView({
                 data-ocid={`admin.matches.edit_button.${i + 1}`}
               >
                 {expanded === m.id ? "▲" : "▼"}
+              </button>
+              {/* Feature 107: Visibility Toggle */}
+              <button
+                type="button"
+                onClick={() =>
+                  toggleVisibility(m.id, (m as any).isVisible !== false)
+                }
+                title={
+                  (m as any).isVisible === false
+                    ? "Show to players"
+                    : "Hide from players"
+                }
+                style={{
+                  background:
+                    (m as any).isVisible === false
+                      ? "rgba(239,68,68,0.15)"
+                      : "rgba(255,255,255,0.06)",
+                  border:
+                    (m as any).isVisible === false
+                      ? "1px solid rgba(239,68,68,0.4)"
+                      : "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 6,
+                  padding: "4px 7px",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                  color:
+                    (m as any).isVisible === false ? "#f87171" : "var(--muted)",
+                }}
+                data-ocid={`admin.matches.toggle.${i + 1}`}
+              >
+                {(m as any).isVisible === false ? "🙈" : "👁️"}
               </button>
             </div>
           </div>
@@ -8960,6 +9535,30 @@ function AdminMatchesView({
                     Assign
                   </button>
                 </div>
+                {/* Feature 102: Voice Link */}
+                {(m as any).voiceLink && (
+                  <a
+                    href={(m as any).voiceLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "5px 10px",
+                      background: "rgba(34,197,94,0.1)",
+                      border: "1px solid rgba(34,197,94,0.3)",
+                      borderRadius: 6,
+                      color: "#86efac",
+                      fontSize: "0.72rem",
+                      textDecoration: "none",
+                      fontWeight: 700,
+                      marginTop: 6,
+                    }}
+                  >
+                    🎙️ Voice Channel Open
+                  </a>
+                )}
               </div>
               {/* Match actions */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -9250,6 +9849,8 @@ function AdminMatchesView({
                   </div>
                 </div>
               )}
+              {/* Feature 104: Admin Side Bet Declare */}
+              <AdminSideBetManager matchId={m.id} showToast={showToast} />
             </div>
           )}
         </div>
@@ -9260,6 +9861,127 @@ function AdminMatchesView({
           <div>No matches</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Feature 104: Admin Side Bet Manager ─────────────────────────────────────
+function AdminSideBetManager({
+  matchId,
+  showToast,
+}: {
+  matchId: string;
+  showToast: (msg: string, type?: "success" | "error") => void;
+}) {
+  const [bets, setBets] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, "sideBets", matchId, "bets"),
+      (snap) => setBets(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    );
+    return () => unsub();
+  }, [matchId]);
+
+  const activeBets = bets.filter((b) => b.status === "active");
+  if (activeBets.length === 0) return null;
+
+  const declareBetWinner = async (bet: any, winner: string) => {
+    try {
+      const loser = winner === bet.challenger ? bet.challenged : bet.challenger;
+      const wSnap = await getDoc(doc(db, "wallet", winner));
+      const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
+      await Promise.all([
+        updateDoc(doc(db, "sideBets", matchId, "bets", bet.id), {
+          status: "completed",
+          winner,
+        }),
+        setDoc(doc(db, "wallet", winner), { coins: cur + bet.amount * 2 }),
+        addDoc(collection(db, "notifications"), {
+          uid: winner,
+          title: "⚔️ Side Bet Won!",
+          message: `You won the side bet against ${loser}! ₹${bet.amount * 2} credited.`,
+          read: false,
+          timestamp: new Date(),
+        }),
+      ]);
+      showToast(`🏆 ${winner} wins the side bet!`);
+    } catch (_) {
+      showToast("Error declaring bet winner", "error");
+    }
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: "10px",
+        background: "rgba(139,92,246,0.08)",
+        borderRadius: 8,
+        border: "1px solid rgba(139,92,246,0.3)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "0.75rem",
+          fontWeight: 700,
+          color: "#c4b5fd",
+          marginBottom: 8,
+        }}
+      >
+        ⚔️ Active Side Bets
+      </div>
+      {activeBets.map((bet) => (
+        <div key={bet.id} style={{ marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--muted)",
+              marginBottom: 4,
+            }}
+          >
+            {bet.challenger} vs {bet.challenged} — ₹{bet.amount * 2} pool
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => declareBetWinner(bet, bet.challenger)}
+              style={{
+                flex: 1,
+                padding: "4px 6px",
+                background: "rgba(255,107,0,0.2)",
+                border: "1px solid rgba(255,107,0,0.4)",
+                borderRadius: 6,
+                color: "#ff9a00",
+                fontSize: "0.68rem",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+              data-ocid="admin.sidebet.confirm_button"
+            >
+              🏆 {bet.challenger} Wins
+            </button>
+            <button
+              type="button"
+              onClick={() => declareBetWinner(bet, bet.challenged)}
+              style={{
+                flex: 1,
+                padding: "4px 6px",
+                background: "rgba(139,92,246,0.2)",
+                border: "1px solid rgba(139,92,246,0.4)",
+                borderRadius: 6,
+                color: "#c4b5fd",
+                fontSize: "0.68rem",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+              data-ocid="admin.sidebet.secondary_button"
+            >
+              🏆 {bet.challenged} Wins
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -10592,6 +11314,597 @@ function AdminLogsView({
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+// ─── Feature 103: Match Auto-Start Countdown ────────────────────────────────
+function AutoStartCountdown({
+  matchId,
+  maxPlayers,
+}: { matchId: string; maxPlayers: number }) {
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    // Listen to the admin match doc for player count
+    const unsub = onSnapshot(doc(db, "matches", matchId), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const playerCount = (data.players || []).length;
+      const status = data.status;
+      if ((status === "full" || playerCount >= maxPlayers) && !started) {
+        // Start 5-second countdown
+        let count = 5;
+        setCountdown(count);
+        const timer = setInterval(() => {
+          count--;
+          if (count <= 0) {
+            clearInterval(timer);
+            setCountdown(0);
+            setStarted(true);
+          } else {
+            setCountdown(count);
+          }
+        }, 1000);
+      }
+    });
+    return () => unsub();
+  }, [matchId, maxPlayers, started]);
+
+  if (countdown === null) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: 8,
+        padding: "10px 14px",
+        background:
+          "linear-gradient(135deg, rgba(255,107,0,0.15), rgba(255,60,0,0.08))",
+        border: "1px solid rgba(255,107,0,0.5)",
+        borderRadius: 10,
+        textAlign: "center",
+        animation: "pulse 0.5s ease infinite alternate",
+      }}
+    >
+      {countdown > 0 ? (
+        <div>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#ff9a00",
+              fontWeight: 700,
+              marginBottom: 4,
+            }}
+          >
+            🔥 All Players Ready!
+          </div>
+          <div
+            style={{
+              fontFamily: "Orbitron, sans-serif",
+              fontSize: "1.8rem",
+              fontWeight: 900,
+              color: "#ff6b00",
+            }}
+          >
+            {countdown}
+          </div>
+          <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
+            Starting in...
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            fontFamily: "Orbitron, sans-serif",
+            fontSize: "1rem",
+            fontWeight: 800,
+            color: "#22c55e",
+          }}
+        >
+          🚀 MATCH STARTED!
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Feature 104: Side Bet Panel ─────────────────────────────────────────────
+function SideBetPanel({
+  matchId,
+  currentUser,
+  joinedPlayers,
+  coins,
+  showToast,
+}: {
+  matchId: string;
+  currentUser: string;
+  joinedPlayers: string[];
+  coins: number;
+  showToast: (msg: string, type?: "success" | "error") => void;
+}) {
+  const [bets, setBets] = useState<any[]>([]);
+  const [showPanel, setShowPanel] = useState(false);
+  const [opponent, setOpponent] = useState("");
+  const [betAmount, setBetAmount] = useState(10);
+
+  useEffect(() => {
+    if (!showPanel) return;
+    // Listen to bets for this match
+    const unsub = onSnapshot(
+      collection(db, "sideBets", matchId, "bets"),
+      (snap) => {
+        setBets(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+    );
+    return () => unsub();
+  }, [matchId, showPanel]);
+
+  const opponents = joinedPlayers.filter((p) => p !== currentUser);
+
+  const createBet = async () => {
+    if (!opponent) {
+      showToast("Select opponent", "error");
+      return;
+    }
+    if (coins < betAmount) {
+      showToast("Insufficient balance", "error");
+      return;
+    }
+    try {
+      // Deduct coins immediately from challenger
+      const wSnap = await getDoc(doc(db, "wallet", currentUser));
+      const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
+      await Promise.all([
+        addDoc(collection(db, "sideBets", matchId, "bets"), {
+          challenger: currentUser,
+          challenged: opponent,
+          amount: betAmount,
+          status: "pending",
+          createdAt: new Date(),
+        }),
+        setDoc(doc(db, "wallet", currentUser), { coins: cur - betAmount }),
+      ]);
+      showToast(`⚔️ Side bet sent to ${opponent}!`);
+      setOpponent("");
+    } catch (_) {
+      showToast("Failed to create bet", "error");
+    }
+  };
+
+  const acceptBet = async (bet: any) => {
+    if (coins < bet.amount) {
+      showToast("Insufficient balance", "error");
+      return;
+    }
+    try {
+      const wSnap = await getDoc(doc(db, "wallet", currentUser));
+      const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
+      await Promise.all([
+        updateDoc(doc(db, "sideBets", matchId, "bets", bet.id), {
+          status: "active",
+        }),
+        setDoc(doc(db, "wallet", currentUser), { coins: cur - bet.amount }),
+      ]);
+      showToast("✅ Bet accepted! Good luck!");
+    } catch (_) {
+      showToast("Failed to accept bet", "error");
+    }
+  };
+
+  const rejectBet = async (betId: string) => {
+    try {
+      const bet = bets.find((b) => b.id === betId);
+      if (bet?.challenger) {
+        const wSnap = await getDoc(doc(db, "wallet", bet.challenger));
+        const cur = wSnap.exists() ? wSnap.data().coins || 0 : 0;
+        await Promise.all([
+          updateDoc(doc(db, "sideBets", matchId, "bets", betId), {
+            status: "rejected",
+          }),
+          setDoc(doc(db, "wallet", bet.challenger), {
+            coins: cur + bet.amount,
+          }),
+        ]);
+      }
+      showToast("Bet rejected. Entry refunded.");
+    } catch (_) {
+      showToast("Failed to reject bet", "error");
+    }
+  };
+
+  const myIncomingBets = bets.filter(
+    (b) => b.challenged === currentUser && b.status === "pending",
+  );
+  const myActiveBets = bets.filter(
+    (b) =>
+      (b.challenger === currentUser || b.challenged === currentUser) &&
+      b.status === "active",
+  );
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        onClick={() => setShowPanel(!showPanel)}
+        style={{
+          background: "none",
+          border: "1px solid rgba(139,92,246,0.4)",
+          borderRadius: 8,
+          padding: "5px 10px",
+          color: "var(--muted)",
+          fontSize: "0.72rem",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          position: "relative",
+        }}
+        data-ocid="matches.sidebet.toggle"
+      >
+        ⚔️ Side Bet
+        {myIncomingBets.length > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -6,
+              right: -6,
+              background: "#8b5cf6",
+              color: "#fff",
+              borderRadius: "50%",
+              minWidth: 16,
+              height: 16,
+              fontSize: "0.6rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+            }}
+          >
+            {myIncomingBets.length}
+          </span>
+        )}
+      </button>
+      {showPanel && (
+        <div
+          style={{
+            marginTop: 8,
+            background: "rgba(139,92,246,0.08)",
+            border: "1px solid rgba(139,92,246,0.3)",
+            borderRadius: 10,
+            padding: "10px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              color: "#c4b5fd",
+              marginBottom: 8,
+            }}
+          >
+            ⚔️ Side Bet
+          </div>
+          {/* Incoming bets */}
+          {myIncomingBets.map((bet) => (
+            <div
+              key={bet.id}
+              style={{
+                background: "rgba(139,92,246,0.15)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                marginBottom: 6,
+                border: "1px solid rgba(139,92,246,0.4)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#e2e8f0",
+                  marginBottom: 6,
+                }}
+              >
+                <span style={{ color: "#f59e0b", fontWeight: 700 }}>
+                  {bet.challenger}
+                </span>{" "}
+                challenges you — ₹{bet.amount}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => acceptBet(bet)}
+                  style={{
+                    flex: 1,
+                    background: "#22c55e",
+                    border: "none",
+                    borderRadius: 6,
+                    color: "#fff",
+                    padding: "4px 8px",
+                    fontSize: "0.7rem",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                  data-ocid="matches.sidebet.confirm_button"
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => rejectBet(bet.id)}
+                  style={{
+                    flex: 1,
+                    background: "#ef4444",
+                    border: "none",
+                    borderRadius: 6,
+                    color: "#fff",
+                    padding: "4px 8px",
+                    fontSize: "0.7rem",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                  data-ocid="matches.sidebet.cancel_button"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+          {/* Active bets */}
+          {myActiveBets.map((bet) => (
+            <div
+              key={bet.id}
+              style={{
+                background: "rgba(34,197,94,0.1)",
+                borderRadius: 8,
+                padding: "6px 10px",
+                marginBottom: 6,
+                border: "1px solid rgba(34,197,94,0.3)",
+                fontSize: "0.72rem",
+                color: "#86efac",
+              }}
+            >
+              🤝 Active bet vs{" "}
+              {bet.challenger === currentUser ? bet.challenged : bet.challenger}{" "}
+              — ₹{bet.amount * 2} pool
+            </div>
+          ))}
+          {/* Create new bet */}
+          {opponents.length > 0 ? (
+            <div>
+              <select
+                className="fire-input"
+                value={opponent}
+                onChange={(e) => setOpponent(e.target.value)}
+                style={{ marginBottom: 6, fontSize: "0.8rem" }}
+                data-ocid="matches.sidebet.select"
+              >
+                <option value="">Select opponent...</option>
+                {opponents.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                {[10, 20, 50].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setBetAmount(amt)}
+                    style={{
+                      flex: 1,
+                      padding: "5px 4px",
+                      borderRadius: 6,
+                      border: "none",
+                      background:
+                        betAmount === amt
+                          ? "#8b5cf6"
+                          : "rgba(255,255,255,0.08)",
+                      color: betAmount === amt ? "#fff" : "var(--muted)",
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                    }}
+                    data-ocid="matches.sidebet.toggle"
+                  >
+                    ₹{amt}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={createBet}
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  background: "linear-gradient(90deg, #8b5cf6, #7c3aed)",
+                  border: "none",
+                  borderRadius: 8,
+                  color: "#fff",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+                data-ocid="matches.sidebet.primary_button"
+              >
+                ⚔️ Challenge — ₹{betAmount}
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--muted)",
+                textAlign: "center",
+              }}
+            >
+              No other players in this match yet
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Feature 105: Match Replay Summary Modal ──────────────────────────────────
+function ReplaySummaryModal({
+  match,
+  onClose,
+}: {
+  match: MatchData & { [key: string]: any };
+  onClose: () => void;
+}) {
+  const fmt = (ts: unknown) => {
+    if (!ts) return "—";
+    let d: Date;
+    if (ts instanceof Date) d = ts;
+    else if (typeof ts === "object" && ts !== null && "seconds" in (ts as any))
+      d = new Date((ts as any).seconds * 1000);
+    else if (typeof ts === "number") d = new Date(ts);
+    else return "—";
+    return d.toLocaleString();
+  };
+
+  const timeline = [
+    { icon: "🏠", label: "Match Created", time: fmt(match.timestamp) },
+    ...(match.players || []).map((uid: string, i: number) => ({
+      icon: i === 0 ? "🥇" : i === 1 ? "🥈" : "👤",
+      label: `${uid} joined`,
+      time: "—",
+    })),
+    ...(match.roomId
+      ? [{ icon: "🔑", label: "Room ID Assigned by Admin", time: "—" }]
+      : []),
+    ...(match.winner
+      ? [
+          {
+            icon: "🏆",
+            label: `Prize ₹${match.prizeAwarded || match.prizePool} awarded to ${match.winner}`,
+            time: "—",
+          },
+        ]
+      : []),
+    ...(match.status === "completed"
+      ? [{ icon: "✅", label: "Match Completed", time: "—" }]
+      : []),
+  ];
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        zIndex: 9000,
+        display: "flex",
+        alignItems: "flex-end",
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      tabIndex={-1}
+      data-ocid="matches.replay.modal"
+    >
+      <div
+        style={{
+          background: "var(--card-bg)",
+          borderRadius: "16px 16px 0 0",
+          width: "100%",
+          maxHeight: "70vh",
+          overflow: "auto",
+          padding: "20px 16px",
+          border: "1px solid rgba(255,107,0,0.3)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "Orbitron, sans-serif",
+              fontWeight: 800,
+              color: "#ffffff",
+              fontSize: "1rem",
+            }}
+          >
+            📋 Match Replay — {match.mode?.toUpperCase()}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--muted)",
+              cursor: "pointer",
+              fontSize: "1.2rem",
+            }}
+            data-ocid="matches.replay.close_button"
+          >
+            ✕
+          </button>
+        </div>
+        <div>
+          {timeline.map((item, i) => (
+            <div
+              key={`${item.label}-${i}`}
+              style={{
+                display: "flex",
+                gap: 10,
+                marginBottom: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <div style={{ fontSize: "1.2rem", flexShrink: 0 }}>
+                {item.icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "#ffffff",
+                    fontWeight: 600,
+                  }}
+                >
+                  {item.label}
+                </div>
+                {item.time && item.time !== "—" && (
+                  <div
+                    style={{
+                      fontSize: "0.68rem",
+                      color: "var(--muted)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {item.time}
+                  </div>
+                )}
+              </div>
+              {i < timeline.length - 1 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 27,
+                    width: 2,
+                    height: 24,
+                    background: "rgba(255,107,0,0.2)",
+                    marginTop: 20,
+                    zIndex: -1,
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
