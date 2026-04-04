@@ -2534,3 +2534,379 @@ body.light-mode .notif-item.unread {
   padding: 20px;
   text-align: center;
 }
+
+/* ================================================================
+   PREMIUM UPGRADE — Real App Feel
+   ================================================================ */
+
+/* ── NEW KEYFRAMES ────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes floatUp {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes borderPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4), 0 0 20px rgba(255, 107, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.1), 0 0 40px
+      rgba(255, 107, 0, 0.35);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInBottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes heroPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes borderRotate {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── STRONGER GLASSMORPHISM CARDS ─────────────────────────────── */
+.card,
+.list-item,
+.stat-card,
+.badge-box {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px
+    rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ── PREMIUM FIRE BUTTON ──────────────────────────────────────── */
+.fire-btn {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8c00 50%, #cc5500 100%) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 24px rgba(255, 107, 0, 0.45), 0 1px 0
+    rgba(255, 255, 255, 0.1) inset !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s
+    cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.fire-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.fire-btn:hover::before {
+  left: 100%;
+}
+
+.fire-btn:hover {
+  box-shadow: 0 6px 32px rgba(255, 107, 0, 0.6), 0 1px 0
+    rgba(255, 255, 255, 0.12) inset !important;
+  transform: translateY(-2px) scale(1.01) !important;
+}
+
+.fire-btn:active {
+  transform: translateY(0) scale(0.99) !important;
+  box-shadow: 0 2px 12px rgba(255, 107, 0, 0.4) !important;
+}
+
+/* ── CINEMATIC MODE CARDS ─────────────────────────────────────── */
+.mode-card {
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.mode-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 16px;
+}
+
+.mode-card:hover {
+  border-color: rgba(255, 107, 0, 0.5) !important;
+  box-shadow: 0 12px 40px rgba(255, 107, 0, 0.3), 0 0 0 1px
+    rgba(255, 107, 0, 0.5) !important;
+  transform: translateY(-3px) !important;
+}
+
+.mode-card-live {
+  animation: borderPulse 2s ease-in-out infinite;
+  border-color: rgba(255, 107, 0, 0.7) !important;
+}
+
+/* ── PREMIUM WELCOME CARD ─────────────────────────────────────── */
+.welcome-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.15) 0%,
+    rgba(255, 60, 0, 0.08) 50%,
+    rgba(10, 10, 26, 0.95) 100%
+  ) !important;
+  box-shadow: 0 8px 32px rgba(255, 107, 0, 0.15), inset 0 1px 0
+    rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 107, 0, 0.4) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+/* ── HERO BANNER PULSE ────────────────────────────────────────── */
+.hero-banner {
+  box-shadow: 0 8px 40px rgba(255, 107, 0, 0.2), inset 0 1px 0
+    rgba(255, 255, 255, 0.05) !important;
+}
+
+.hero-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 30% 50%,
+    rgba(255, 107, 0, 0.18) 0%,
+    transparent 70%
+  );
+  animation: heroPulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── BOTTOM NAV PREMIUM ───────────────────────────────────────── */
+.nav-item.active {
+  color: #ffffff !important;
+}
+
+.nav-item.active::before {
+  height: 3px !important;
+  box-shadow: 0 0 12px rgba(255, 107, 0, 0.9), 0 0 4px rgba(255, 107, 0, 0.6) !important;
+}
+
+.nav-item.active .nav-icon {
+  filter: drop-shadow(0 0 6px rgba(255, 107, 0, 0.8));
+}
+
+/* ── GOLD TOP-1 SHIMMER ───────────────────────────────────────── */
+.rank-card.top-1 {
+  background: linear-gradient(
+    270deg,
+    rgba(255, 215, 0, 0.12),
+    rgba(255, 140, 0, 0.08),
+    rgba(255, 215, 0, 0.12)
+  ) !important;
+  background-size: 400% 400% !important;
+  animation: goldShimmer 2.5s ease-in-out infinite !important;
+  border-color: rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.15) !important;
+}
+
+/* ── SMOOTH SCROLL FEEL ───────────────────────────────────────── */
+.main-content,
+.view-container {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* ── UPI BOX PREMIUM GLOW ─────────────────────────────────────── */
+.upi-box {
+  box-shadow: 0 0 30px rgba(255, 107, 0, 0.25), 0 0 60px rgba(255, 107, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── PREMIUM TOAST ────────────────────────────────────────────── */
+.toast-premium {
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(16, 16, 32, 0.95) !important;
+  border: 1px solid rgba(255, 107, 0, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 107, 0, 0.1) !important;
+  animation: slideInBottom 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ── HEADER SCROLL UPGRADE ────────────────────────────────────── */
+.app-header {
+  transition: border-bottom-color 0.3s ease, box-shadow 0.3s ease !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+.app-header.header-scrolled {
+  border-bottom-color: rgba(255, 107, 0, 0.5) !important;
+  box-shadow: 0 2px 20px rgba(255, 107, 0, 0.15) !important;
+}
+
+/* ── QUICK GRID CARDS UPGRADE ─────────────────────────────────── */
+.quick-grid {
+  gap: 14px !important;
+}
+
+/* ── LIVE BADGE ON MODE CARD ──────────────────────────────────── */
+.mode-live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.85);
+  border: 1px solid rgba(255, 100, 100, 0.6);
+  color: #fff;
+  font-size: 0.58rem;
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.mode-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  animation: livePulse 0.9s infinite;
+}
+
+/* ── ROOM READY BADGE ─────────────────────────────────────────── */
+.room-ready-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  font-size: 0.65rem;
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  animation: borderPulse 2s ease-in-out infinite;
+}
+
+/* ── COIN DISPLAY IN HEADER ───────────────────────────────────── */
+.header-coins {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 20px;
+  padding: 3px 10px 3px 8px;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  animation: countUp 0.4s ease;
+}
+
+/* ── TIME GREETING ────────────────────────────────────────────── */
+.time-greeting {
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 2px;
+  letter-spacing: 0.04em;
+  animation: slideInLeft 0.4s ease;
+}

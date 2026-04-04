@@ -478,6 +478,21 @@ export default function App() {
   const notifPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [broadcastMessages, setBroadcastMessages] = useState<any[]>([]);
   const [newMsgToast, setNewMsgToast] = useState<string | null>(null);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+
+  // ── Header scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const el = document.querySelector(".main-content, .view-container");
+      if (el) setHeaderScrolled(el.scrollTop > 10);
+    };
+    const observer = new MutationObserver(() => {
+      const el = document.querySelector(".main-content, .view-container");
+      if (el) el.addEventListener("scroll", handleScroll, { passive: true });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   // ── Theme init
   useEffect(() => {
@@ -800,21 +815,18 @@ export default function App() {
       {newMsgToast && (
         <div
           data-ocid="app.toast"
+          className="toast-premium"
           style={{
             position: "fixed",
             bottom: 80,
             left: "50%",
             transform: "translateX(-50%)",
-            background: "#1a1a2e",
-            border: "1px solid var(--orange)",
-            borderRadius: 12,
-            padding: "12px 20px",
+            borderRadius: 14,
+            padding: "13px 20px",
             zIndex: 9999,
             color: "#fff",
-            maxWidth: 320,
-            width: "90%",
-            boxShadow: "0 4px 20px rgba(255,107,0,0.4)",
-            animation: "slideUp 0.3s ease",
+            maxWidth: 340,
+            width: "92%",
           }}
         >
           <div style={{ color: "#ffffff", fontWeight: "bold", fontSize: 13 }}>
@@ -840,17 +852,27 @@ export default function App() {
               zIndex: 90,
               background:
                 toast.type === "success"
-                  ? "rgba(34,197,94,0.95)"
-                  : "rgba(239,68,68,0.95)",
+                  ? "rgba(20,50,30,0.97)"
+                  : "rgba(50,15,15,0.97)",
+              border:
+                toast.type === "success"
+                  ? "1px solid rgba(34,197,94,0.5)"
+                  : "1px solid rgba(239,68,68,0.5)",
               color: "white",
-              padding: "10px 20px",
-              borderRadius: 10,
+              padding: "11px 22px",
+              borderRadius: 12,
               fontFamily: "Rajdhani, sans-serif",
               fontWeight: 700,
               fontSize: "0.9rem",
               maxWidth: "90%",
               textAlign: "center",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              boxShadow:
+                toast.type === "success"
+                  ? "0 6px 24px rgba(34,197,94,0.3), 0 2px 8px rgba(0,0,0,0.4)"
+                  : "0 6px 24px rgba(239,68,68,0.3), 0 2px 8px rgba(0,0,0,0.4)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              letterSpacing: "0.02em",
             }}
           >
             {toast.msg}
@@ -879,7 +901,9 @@ export default function App() {
 
       {/* Header */}
       {isLoggedIn && view !== "blocked" && !isAdminView && (
-        <header className="app-header">
+        <header
+          className={`app-header${headerScrolled ? " header-scrolled" : ""}`}
+        >
           <span className="app-title">🎮 MR.SONIC FF</span>
           <div className="header-actions">
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -888,6 +912,9 @@ export default function App() {
                 {isOnline ? `👥 ${liveCount}` : "Offline"}
               </span>
             </div>
+            {currentUser && currentUser !== "admin" && (
+              <div className="header-coins">🪙 ₹{coins}</div>
+            )}
             <button
               type="button"
               className="icon-btn"
@@ -2506,6 +2533,14 @@ function DashboardView({
       {/* Welcome card */}
       <div className="welcome-card">
         <div>
+          <div className="time-greeting">
+            {(() => {
+              const h = new Date().getHours();
+              if (h < 12) return "Good Morning ☀️";
+              if (h < 17) return "Good Afternoon ⚡";
+              return "Good Evening 🌙";
+            })()}
+          </div>
           <div className="welcome-name">
             {userData.displayName || currentUser}
           </div>
@@ -2790,9 +2825,9 @@ function DashboardView({
             {/* Top: icon */}
             <div
               style={{
-                fontSize: "2rem",
+                fontSize: "2.5rem",
                 lineHeight: 1,
-                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+                filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.5))",
               }}
             >
               {item.icon}
@@ -2861,6 +2896,11 @@ function DashboardView({
 
               {/* ── Room ID & Password — Always Visible ── */}
               <div style={{ marginTop: 8 }}>
+                {m.roomId && (
+                  <div style={{ marginBottom: 8 }}>
+                    <span className="room-ready-badge">✅ ROOM READY</span>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() =>
@@ -3043,11 +3083,17 @@ function DashboardView({
           <button
             type="button"
             key={mode.id}
-            className="mode-card"
+            className={`mode-card${modeOccupancy[mode.id]?.count > 0 ? " mode-card-live" : ""}`}
             onClick={() => setSelectedMode(mode)}
             data-ocid="dashboard.primary_button"
             style={{ padding: 0, overflow: "hidden" }}
           >
+            {modeOccupancy[mode.id]?.count > 0 && (
+              <div className="mode-live-badge">
+                <span className="mode-live-dot" />
+                LIVE
+              </div>
+            )}
             <div className={`mode-poster-css mode-poster-${mode.id}`}>
               <div className="mode-poster-entry-badge">₹{mode.entryFee}</div>
               <div className="mode-poster-emoji">{mode.emoji}</div>
@@ -5088,10 +5134,14 @@ function LeaderboardView({
           <div
             style={{
               background:
-                "linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,107,0,0.06))",
-              border: "2px solid rgba(255,215,0,0.45)",
+                "linear-gradient(270deg, rgba(255,215,0,0.14), rgba(255,140,0,0.09), rgba(255,215,0,0.14))",
+              backgroundSize: "400% 400%",
+              animation: "goldShimmer 2.5s ease-in-out infinite",
+              border: "2px solid rgba(255,215,0,0.55)",
               borderRadius: 16,
               padding: "16px 14px 12px",
+              boxShadow:
+                "0 4px 24px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
             }}
           >
             <div
