@@ -246,7 +246,8 @@ type View =
   | "admin-revenue"
   | "admin-messages"
   | "messages"
-  | "payment";
+  | "payment"
+  | "tournament";
 
 type NavTab =
   | "home"
@@ -254,7 +255,8 @@ type NavTab =
   | "leaderboard"
   | "notifications"
   | "profile"
-  | "payment";
+  | "payment"
+  | "tournament";
 
 interface UserData {
   uid: string;
@@ -775,6 +777,7 @@ export default function App() {
       notifications: "notifications",
       profile: "profile",
       payment: "payment",
+      tournament: "tournament",
     };
     setView(map[tab]);
     if (tab === "notifications" && currentUser) {
@@ -1096,6 +1099,16 @@ export default function App() {
             setView={setView}
           />
         )}
+        {view === "tournament" && currentUser && (
+          <TournamentView
+            key="tournament"
+            currentUser={currentUser}
+            coins={coins}
+            setView={setView}
+            setIsLoading={setIsLoading}
+            showToast={showToast}
+          />
+        )}
         {isAdminView && currentUser && (
           <AdminLayout
             key={view}
@@ -1175,6 +1188,18 @@ export default function App() {
           >
             <span>📢</span>
             <span>Msgs</span>
+          </button>
+          <button
+            type="button"
+            className={`nav-item ${view === "tournament" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("tournament" as any);
+              setView("tournament");
+            }}
+            data-ocid="nav.tournament.link"
+          >
+            <span>🏟️</span>
+            <span>Arena</span>
           </button>
         </nav>
       )}
@@ -2861,6 +2886,15 @@ function DashboardView({
           </button>
         ))}
       </div>
+
+      {/* Daily Missions */}
+      {!isAdmin && (
+        <DailyMissions
+          currentUser={currentUser}
+          matchesPlayed={userData.matchesPlayed || 0}
+          coins={coins}
+        />
+      )}
 
       {/* Active Matches on Dashboard */}
       {activeMatches.length > 0 && (
@@ -5504,6 +5538,89 @@ function ProfileView({
                   {b.icon} {b.label}
                 </span>
               ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* VIP Status */}
+      <VipStatusWidget
+        totalSpent={
+          userData.matchesPlayed
+            ? userData.matchesPlayed * (coins > 0 ? 25 : 0)
+            : 0
+        }
+      />
+
+      {/* Battle Pass */}
+      <BattlePassWidget matchesPlayed={userData.matchesPlayed || 0} />
+
+      {/* Rank Tier */}
+      {(() => {
+        const rank = getRankTier(userData.wins || 0);
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div className="section-label">🏅 Current Rank</div>
+            <div
+              className="card-3d"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: 16,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 40,
+                  filter: `drop-shadow(0 0 12px ${rank.color})`,
+                }}
+              >
+                {rank.emoji}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontFamily: "Orbitron, sans-serif",
+                    fontSize: "18px",
+                    fontWeight: 900,
+                    color: rank.color,
+                  }}
+                >
+                  {rank.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "rgba(255,255,255,0.5)",
+                    marginTop: 2,
+                  }}
+                >
+                  {userData.wins >= rank.next
+                    ? "🏆 MAX RANK"
+                    : `${rank.next - (userData.wins || 0)} more wins for next tier`}
+                </div>
+                <div
+                  style={{
+                    height: 6,
+                    background: "rgba(255,255,255,0.1)",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                    marginTop: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 3,
+                      background: `linear-gradient(90deg, ${rank.color}, ${rank.color}88)`,
+                      width: `${Math.min(100, ((userData.wins || 0) / rank.next) * 100)}%`,
+                      transition: "width 1s ease",
+                      boxShadow: `0 0 8px ${rank.color}`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -11956,5 +12073,886 @@ function ReplaySummaryModal({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Confetti Component ─────────────────────────────────────────────────────
+function _Confetti({ onDone }: { onDone: () => void }) {
+  const colors = [
+    "#ff6b00",
+    "#ffd700",
+    "#00e676",
+    "#00e5ff",
+    "#ff1744",
+    "#fff",
+  ];
+  const pieces = Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    color: colors[i % colors.length],
+    left: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 1.5}s`,
+    duration: `${2 + Math.random() * 1.5}s`,
+    size: `${8 + Math.random() * 8}px`,
+    rotate: `${Math.random() * 360}deg`,
+  }));
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="confetti-overlay" data-ocid="confetti.panel">
+      {pieces.map((p) => (
+        <div
+          key={p.id}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            top: "-20px",
+            backgroundColor: p.color,
+            width: p.size,
+            height: p.size,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            transform: `rotate(${p.rotate})`,
+            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── VIP System Helper ──────────────────────────────────────────────────────
+function getVipTier(totalSpent: number): {
+  tier: string;
+  next: number;
+  label: string;
+} {
+  if (totalSpent >= 5000)
+    return { tier: "gold", next: 5000, label: "GOLD VIP" };
+  if (totalSpent >= 2000)
+    return { tier: "silver", next: 5000, label: "SILVER VIP" };
+  if (totalSpent >= 500)
+    return { tier: "bronze", next: 2000, label: "BRONZE VIP" };
+  return { tier: "none", next: 500, label: "No VIP" };
+}
+
+function getRankTier(wins: number): {
+  name: string;
+  emoji: string;
+  next: number;
+  color: string;
+} {
+  if (wins >= 50)
+    return { name: "Master", emoji: "💎", next: 50, color: "#00e5ff" };
+  if (wins >= 30)
+    return { name: "Legend", emoji: "🏆", next: 50, color: "#ffd700" };
+  if (wins >= 15)
+    return { name: "Elite", emoji: "⚔️", next: 30, color: "#9c27b0" };
+  if (wins >= 5)
+    return { name: "Warrior", emoji: "🛡️", next: 15, color: "#ff6b00" };
+  return { name: "Rookie", emoji: "🌟", next: 5, color: "#4caf50" };
+}
+
+// ─── Daily Missions Widget ─────────────────────────────────────────────────
+function DailyMissions({
+  currentUser,
+  matchesPlayed: _mp,
+  coins: _coins,
+}: { currentUser: string; matchesPlayed: number; coins: number }) {
+  const today = new Date().toDateString();
+  const storageKey = `missions_${currentUser}_${today}`;
+  const stored = JSON.parse(
+    localStorage.getItem(storageKey) ||
+      '{"joined":false,"deposited":false,"referred":false}',
+  );
+
+  const missions = [
+    {
+      id: "joined",
+      icon: "⚔️",
+      label: "Join 1 Match Today",
+      reward: "5 Coins",
+      done: stored.joined,
+      color: "#ff6b00",
+    },
+    {
+      id: "deposited",
+      icon: "💰",
+      label: "Deposit ₹30 Today",
+      reward: "5 Coins",
+      done: stored.deposited,
+      color: "#00e676",
+    },
+    {
+      id: "referred",
+      icon: "🔗",
+      label: "Refer a Friend",
+      reward: "10 Coins",
+      done: stored.referred,
+      color: "#00e5ff",
+    },
+  ];
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="section-label">🎯 Daily Missions</div>
+      {missions.map((m) => (
+        <div
+          key={m.id}
+          className={`mission-card${m.done ? " completed" : ""}`}
+          style={{ display: "flex", alignItems: "center", gap: 12 }}
+        >
+          <span className="mission-icon" style={{ opacity: m.done ? 0.5 : 1 }}>
+            {m.done ? "✅" : m.icon}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                color: m.done ? "rgba(255,255,255,0.4)" : "#fff",
+                marginBottom: 4,
+              }}
+            >
+              {m.label}
+            </div>
+            <div
+              style={{
+                fontSize: "0.68rem",
+                color: m.done ? "rgba(255,255,255,0.3)" : m.color,
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              +{m.reward}
+            </div>
+          </div>
+          <div
+            style={{
+              padding: "4px 10px",
+              borderRadius: 20,
+              fontSize: "0.65rem",
+              fontWeight: 700,
+              background: m.done
+                ? "rgba(0,230,118,0.15)"
+                : "rgba(255,255,255,0.08)",
+              color: m.done ? "#00e676" : "rgba(255,255,255,0.4)",
+              border: `1px solid ${m.done ? "rgba(0,230,118,0.4)" : "rgba(255,255,255,0.1)"}`,
+              fontFamily: "Orbitron, sans-serif",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {m.done ? "DONE" : "TODO"}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Battle Pass Widget ─────────────────────────────────────────────────────
+function BattlePassWidget({ matchesPlayed }: { matchesPlayed: number }) {
+  const tier = Math.min(10, Math.floor(matchesPlayed / 5));
+  const progress = ((matchesPlayed % 5) / 5) * 100;
+  const tierColors = [
+    "#4caf50",
+    "#8bc34a",
+    "#cddc39",
+    "#ffeb3b",
+    "#ffc107",
+    "#ff9800",
+    "#ff5722",
+    "#f44336",
+    "#9c27b0",
+    "#00bcd4",
+    "#ffd700",
+  ];
+  const tierRewards = [0, 5, 10, 15, 20, 30, 40, 50, 75, 100, 200];
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="section-label">🎮 Battle Pass — Season Progress</div>
+      <div className="vip-card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "12px",
+                color: tierColors[tier],
+                fontWeight: 700,
+              }}
+            >
+              TIER {tier} / 10
+            </div>
+            <div
+              style={{
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.5)",
+                marginTop: 2,
+              }}
+            >
+              {matchesPlayed} matches played
+            </div>
+          </div>
+          <div
+            style={{
+              background: `${tierColors[tier]}22`,
+              border: `1px solid ${tierColors[tier]}66`,
+              color: tierColors[tier],
+              padding: "4px 12px",
+              borderRadius: 20,
+              fontFamily: "Orbitron, sans-serif",
+              fontSize: "10px",
+              fontWeight: 700,
+            }}
+          >
+            ₹{tierRewards[tier]} EARNED
+          </div>
+        </div>
+        <div className="battlepass-bar">
+          <div
+            className="battlepass-fill"
+            style={{
+              width: `${progress}%`,
+              background: `linear-gradient(90deg, ${tierColors[Math.max(0, tier - 1)]}, ${tierColors[tier]})`,
+            }}
+          />
+        </div>
+        <div
+          style={{ display: "flex", gap: 4, marginTop: 8, overflow: "hidden" }}
+        >
+          {Array.from({ length: 10 }, (_, i) => (
+            <div
+              key={`battlepass-tier-pos-${i + 1}`}
+              style={{
+                flex: 1,
+                height: 6,
+                borderRadius: 3,
+                background:
+                  i < tier ? tierColors[i + 1] : "rgba(255,255,255,0.1)",
+                transition: "all 0.3s",
+                boxShadow: i < tier ? `0 0 6px ${tierColors[i + 1]}` : "none",
+              }}
+            />
+          ))}
+        </div>
+        <div
+          style={{
+            fontSize: "10px",
+            color: "rgba(255,255,255,0.4)",
+            marginTop: 6,
+            fontFamily: "Orbitron, sans-serif",
+          }}
+        >
+          {tier < 10
+            ? `${5 - (matchesPlayed % 5)} more matches to Tier ${tier + 1}`
+            : "🏆 MAX TIER REACHED!"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── VIP Status Widget ──────────────────────────────────────────────────────
+function VipStatusWidget({ totalSpent }: { totalSpent: number }) {
+  const vip = getVipTier(totalSpent);
+  const progressToNext =
+    vip.tier === "gold" ? 100 : Math.round((totalSpent / vip.next) * 100);
+  if (vip.tier === "none" && totalSpent < 100) return null;
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="section-label">👑 VIP Status</div>
+      <div className="vip-card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: 4,
+                fontFamily: "Orbitron, sans-serif",
+                letterSpacing: "1px",
+              }}
+            >
+              YOUR RANK
+            </div>
+            {vip.tier === "gold" && (
+              <span className="vip-badge-gold">👑 {vip.label}</span>
+            )}
+            {vip.tier === "silver" && (
+              <span className="vip-badge-silver">⭐ {vip.label}</span>
+            )}
+            {vip.tier === "bronze" && (
+              <span className="vip-badge-bronze">🔶 {vip.label}</span>
+            )}
+            {vip.tier === "none" && (
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "rgba(255,255,255,0.6)",
+                  fontFamily: "Orbitron, sans-serif",
+                }}
+              >
+                No VIP Yet
+              </span>
+            )}
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.4)",
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              TOTAL SPENT
+            </div>
+            <div
+              style={{
+                fontFamily: "Orbitron, sans-serif",
+                fontSize: "16px",
+                fontWeight: 800,
+                color: "#ffd700",
+              }}
+            >
+              ₹{totalSpent}
+            </div>
+          </div>
+        </div>
+        {vip.tier !== "gold" && (
+          <>
+            <div
+              style={{
+                fontSize: "10px",
+                color: "rgba(255,255,255,0.4)",
+                marginBottom: 4,
+                fontFamily: "Orbitron, sans-serif",
+              }}
+            >
+              Progress to{" "}
+              {vip.tier === "silver"
+                ? "GOLD"
+                : vip.tier === "bronze"
+                  ? "SILVER"
+                  : "BRONZE"}
+              : ₹{totalSpent} / ₹{vip.next}
+            </div>
+            <div className="loyalty-bar">
+              <div
+                className="loyalty-fill"
+                style={{ width: `${Math.min(100, progressToNext)}%` }}
+              />
+            </div>
+          </>
+        )}
+        {vip.tier !== "none" && (
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.5)",
+              fontFamily: "Rajdhani, sans-serif",
+            }}
+          >
+            🎁 VIP Perks: Priority support, -5% entry fee, exclusive badges
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tournament View ─────────────────────────────────────────────────────────
+function TournamentView({
+  currentUser,
+  coins,
+  setView: _setView,
+  setIsLoading,
+  showToast,
+}: {
+  currentUser: string;
+  coins: number;
+  setView: (v: View) => void;
+  setIsLoading: (v: boolean) => void;
+  showToast: (msg: string, type?: "success" | "error") => void;
+}) {
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [countdown, setCountdown] = useState("");
+  const [_showRules, _setShowRules] = useState(false);
+  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+
+  // Calculate next Sunday 6PM countdown
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const next = new Date();
+      next.setHours(18, 0, 0, 0);
+      const daysUntilSunday = (7 - now.getDay()) % 7 || 7;
+      next.setDate(now.getDate() + daysUntilSunday);
+      if (next <= now) next.setDate(next.getDate() + 7);
+      const diff = next.getTime() - now.getTime();
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdown(
+        `${d}D ${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`,
+      );
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Load tournaments from Firestore
+  useEffect(() => {
+    setIsLoading(true);
+    getDocs(collection(db, "tournaments"))
+      .then((snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        list.sort(
+          (a: any, b: any) =>
+            (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0),
+        );
+        setTournaments(list);
+        // Check which ones current user is registered for
+        const regSet = new Set<string>();
+        for (const t of list as any[]) {
+          if (t.registrants?.includes(currentUser)) regSet.add(t.id);
+        }
+        setRegisteredIds(regSet);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [currentUser, setIsLoading]);
+
+  const registerForTournament = async (t: any) => {
+    if (registeredIds.has(t.id)) {
+      showToast("Already registered!", "error");
+      return;
+    }
+    const fee = t.registrationFee || 0;
+    if (coins < fee) {
+      showToast(`Insufficient coins. Need ₹${fee}`, "error");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const tRef = doc(db, "tournaments", t.id);
+      const updatedRegistrants = [...(t.registrants || []), currentUser];
+      await Promise.all([
+        updateDoc(tRef, { registrants: updatedRegistrants }),
+        ...(fee > 0
+          ? [setDoc(doc(db, "wallet", currentUser), { coins: coins - fee })]
+          : []),
+        addDoc(collection(db, "notifications"), {
+          uid: currentUser,
+          title: "🏆 Tournament Registered!",
+          message: `You registered for "${t.title || "Tournament"}". Entry fee ₹${fee} deducted.`,
+          read: false,
+          timestamp: new Date(),
+        }),
+      ]);
+      setRegisteredIds((prev) => new Set([...prev, t.id]));
+      setTournaments((prev) =>
+        prev.map((item) =>
+          item.id === t.id
+            ? { ...item, registrants: updatedRegistrants }
+            : item,
+        ),
+      );
+      showToast("🏆 Registered successfully!");
+    } catch (_) {
+      showToast("Registration failed", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusEl = (status: string) => {
+    if (status === "live")
+      return <span className="tournament-status-live">🔴 LIVE</span>;
+    if (status === "completed")
+      return <span className="tournament-status-completed">✅ Completed</span>;
+    return <span className="tournament-status-open">🟢 Open</span>;
+  };
+
+  return (
+    <motion.div
+      className="view-container"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      data-ocid="tournament.section"
+    >
+      <div className="view-title">🏟️ TOURNAMENT ARENA</div>
+
+      {/* Countdown to next tournament */}
+      <div
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(150,0,255,0.2) 0%, rgba(255,107,0,0.1) 100%)",
+          border: "1px solid rgba(150,0,255,0.4)",
+          borderRadius: 20,
+          padding: 20,
+          textAlign: "center",
+          marginBottom: 20,
+          position: "relative",
+          overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(150,0,255,0.2)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: "linear-gradient(90deg, #9c27b0, #ff6b00, #ffd700)",
+          }}
+        />
+        <div
+          style={{
+            fontSize: "11px",
+            color: "rgba(255,255,255,0.5)",
+            fontFamily: "Orbitron, sans-serif",
+            letterSpacing: "3px",
+            marginBottom: 8,
+          }}
+        >
+          NEXT TOURNAMENT IN
+        </div>
+        <div className="tournament-countdown">{countdown}</div>
+        <div
+          style={{
+            fontSize: "11px",
+            color: "rgba(255,255,255,0.4)",
+            fontFamily: "Orbitron, sans-serif",
+          }}
+        >
+          Every Sunday at 6:00 PM
+        </div>
+      </div>
+
+      {/* Tournaments list */}
+      <div className="section-label">📋 Active Tournaments</div>
+
+      {tournaments.filter((t: any) => t.status !== "completed").length === 0 ? (
+        <div className="empty-state" data-ocid="tournament.empty_state">
+          <div className="empty-state-icon">🏟️</div>
+          <div className="empty-state-text">
+            No active tournaments right now.
+            <br />
+            Check back soon!
+          </div>
+        </div>
+      ) : (
+        tournaments
+          .filter((t: any) => t.status !== "completed")
+          .map((t: any, i: number) => (
+            <div
+              key={t.id}
+              className="tournament-card"
+              data-ocid={`tournament.item.${i + 1}`}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: 10,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "Orbitron, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "14px",
+                      color: "#fff",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t.title || "Weekly Tournament"}
+                  </div>
+                  <div
+                    style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)" }}
+                  >
+                    👥 {(t.registrants || []).length} registered
+                  </div>
+                </div>
+                {getStatusEl(t.status || "open")}
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                <div className="stat-box">
+                  <div className="stat-value">₹{t.registrationFee || 0}</div>
+                  <div className="stat-label">Entry Fee</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-value" style={{ color: "#00e676" }}>
+                    ₹{t.prizePool || 0}
+                  </div>
+                  <div className="stat-label">Prize Pool</div>
+                </div>
+              </div>
+              {t.rules && (
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: "rgba(255,255,255,0.5)",
+                    marginBottom: 10,
+                    fontFamily: "Rajdhani, sans-serif",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  📋 {t.rules}
+                </div>
+              )}
+              {registeredIds.has(t.id) ? (
+                <div
+                  style={{
+                    background: "rgba(0,230,118,0.12)",
+                    border: "1px solid rgba(0,230,118,0.3)",
+                    borderRadius: 10,
+                    padding: "8px 14px",
+                    textAlign: "center",
+                    color: "#00e676",
+                    fontFamily: "Orbitron, sans-serif",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  ✅ REGISTERED
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="fire-btn"
+                  onClick={() => registerForTournament(t)}
+                  data-ocid={`tournament.register.${i + 1}.button`}
+                >
+                  🏆 REGISTER — ₹{t.registrationFee || 0}
+                </button>
+              )}
+            </div>
+          ))
+      )}
+
+      {/* Past Tournaments */}
+      {tournaments.filter((t: any) => t.status === "completed").length > 0 && (
+        <>
+          <div className="section-label">📜 Past Tournaments</div>
+          {tournaments
+            .filter((t: any) => t.status === "completed")
+            .map((t: any, i: number) => (
+              <div
+                key={t.id}
+                className="tournament-card"
+                style={{ opacity: 0.8 }}
+                data-ocid={`tournament.past.item.${i + 1}`}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "Orbitron, sans-serif",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#fff",
+                    }}
+                  >
+                    {t.title || "Past Tournament"}
+                  </div>
+                  <span className="tournament-status-completed">✅ Done</span>
+                </div>
+                {t.winner && (
+                  <div
+                    style={{
+                      background: "rgba(255,215,0,0.1)",
+                      border: "1px solid rgba(255,215,0,0.3)",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: "11px",
+                      fontFamily: "Orbitron, sans-serif",
+                      color: "#ffd700",
+                    }}
+                  >
+                    🥇 Winner: {t.winner}
+                  </div>
+                )}
+              </div>
+            ))}
+        </>
+      )}
+
+      <div style={{ height: 20 }} />
+      <Footer />
+    </motion.div>
+  );
+}
+
+// ─── Session Timeout Hook ──────────────────────────────────────────────────
+function _useSessionTimeout(onTimeout: () => void, isLoggedIn: boolean) {
+  const [showWarning, setShowWarning] = useState(false);
+  const [countdown, setCountdown] = useState(60);
+  const lastActivity = useRef(Date.now());
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const updateActivity = () => {
+      lastActivity.current = Date.now();
+      setShowWarning(false);
+      setCountdown(60);
+    };
+    window.addEventListener("click", updateActivity, { passive: true });
+    window.addEventListener("keydown", updateActivity, { passive: true });
+    window.addEventListener("touchstart", updateActivity, { passive: true });
+
+    const check = setInterval(() => {
+      const idle = Date.now() - lastActivity.current;
+      if (idle > 29 * 60 * 1000 && !showWarning) {
+        // 29 min
+        setShowWarning(true);
+        setCountdown(60);
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener("click", updateActivity);
+      window.removeEventListener("keydown", updateActivity);
+      window.removeEventListener("touchstart", updateActivity);
+      clearInterval(check);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isLoggedIn, showWarning]);
+
+  useEffect(() => {
+    if (!showWarning) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+    timerRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          setShowWarning(false);
+          onTimeout();
+          return 60;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [showWarning, onTimeout]);
+
+  return {
+    showWarning,
+    countdown,
+    dismiss: () => {
+      setShowWarning(false);
+      lastActivity.current = Date.now();
+    },
+  };
+}
+
+// ─── Rank Up Overlay ────────────────────────────────────────────────────────
+function _RankUpOverlay({
+  wins,
+  onClose,
+}: { wins: number; onClose: () => void }) {
+  const rank = getRankTier(wins);
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <motion.div
+      className="rankup-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      data-ocid="rankup.modal"
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200 }}
+        style={{ textAlign: "center" }}
+      >
+        <div className="rankup-badge">{rank.emoji}</div>
+        <div
+          style={{
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.5)",
+            fontFamily: "Orbitron, sans-serif",
+            letterSpacing: "3px",
+            marginBottom: 8,
+          }}
+        >
+          YOU RANKED UP TO
+        </div>
+        <div className="rankup-title" style={{ color: rank.color }}>
+          {rank.name}
+        </div>
+        <div className="rankup-subtitle">Congratulations, Champion! 🔥</div>
+        <motion.button
+          type="button"
+          style={{
+            marginTop: 24,
+            padding: "10px 28px",
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 30,
+            color: "#fff",
+            fontSize: "12px",
+            cursor: "pointer",
+            fontFamily: "Orbitron, sans-serif",
+            letterSpacing: "1px",
+          }}
+          whileHover={{ scale: 1.05 }}
+          onClick={onClose}
+          data-ocid="rankup.close_button"
+        >
+          AWESOME! ⚡
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 }

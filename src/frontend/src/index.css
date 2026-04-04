@@ -2910,3 +2910,1259 @@ body.light-mode .notif-item.unread {
   letter-spacing: 0.04em;
   animation: slideInLeft 0.4s ease;
 }
+
+/* ================================================================
+   🔥 ULTRA CINEMATIC 3D OVERHAUL — PREMIUM ESPORTS DESIGN
+   ================================================================ */
+
+/* ── NEW KEYFRAMES ────────────────────────────────────────────── */
+@keyframes float3d {
+  0%,
+  100% {
+    transform: translateY(0px) rotateX(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(3deg);
+  }
+}
+
+@keyframes glowPulse3d {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.4), 0 0 40px rgba(255, 107, 0, 0.2),
+      inset 0 0 20px rgba(255, 107, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 107, 0, 0.8), 0 0 80px rgba(255, 107, 0, 0.4),
+      inset 0 0 40px rgba(255, 107, 0, 0.2);
+  }
+}
+
+@keyframes hologram {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.8;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+  }
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.8;
+  }
+}
+
+@keyframes neonFlicker {
+  0%,
+  19%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    text-shadow: 0 0 10px #ff6b00, 0 0 20px #ff6b00, 0 0 40px #ff6b00;
+  }
+  20%,
+  24%,
+  55% {
+    text-shadow: none;
+  }
+}
+
+@keyframes metalSheen {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes cardFlip3d {
+  0% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: perspective(1000px) rotateY(5deg) scale(1.02);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes borderGlow {
+  0%,
+  100% {
+    border-color: rgba(255, 107, 0, 0.3);
+    box-shadow: 0 0 5px rgba(255, 107, 0, 0.2);
+  }
+  50% {
+    border-color: rgba(255, 107, 0, 0.8);
+    box-shadow: 0 0 20px rgba(255, 107, 0, 0.6);
+  }
+}
+
+@keyframes titleGlow3d {
+  0%,
+  100% {
+    text-shadow: 0 0 10px #ff6b00, 0 0 20px #ff6b00;
+    transform: perspective(400px) rotateY(-2deg) scale(1);
+  }
+  50% {
+    text-shadow: 0 0 20px #ff6b00, 0 0 60px #ff8c00, 0 0 100px #ffab00;
+    transform: perspective(400px) rotateY(2deg) scale(1.03);
+  }
+}
+
+@keyframes progressGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #ff6b00, 0 0 10px #ff6b00;
+  }
+  50% {
+    box-shadow: 0 0 15px #ff6b00, 0 0 30px #ff6b00;
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rankPop {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes vipGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px gold, 0 0 20px gold;
+  }
+  50% {
+    box-shadow: 0 0 30px gold, 0 0 60px rgba(255, 215, 0, 0.5);
+  }
+}
+
+@keyframes tournamentCountdown {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes liveGlitch {
+  0%,
+  100% {
+    transform: skewX(0deg);
+  }
+  10% {
+    transform: skewX(-2deg);
+  }
+  20% {
+    transform: skewX(2deg);
+  }
+  30% {
+    transform: skewX(0deg);
+  }
+}
+
+/* ── ULTRA-REALISTIC MODE POSTER OVERHAUL ─────────────────────── */
+.mode-poster-css {
+  position: relative !important;
+  height: 95px !important;
+  overflow: hidden !important;
+  border-radius: 13px 13px 0 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+}
+
+.mode-poster-1v1 {
+  background: radial-gradient(
+      circle at 30% 50%,
+      rgba(255, 50, 0, 0.9) 0%,
+      transparent 50%
+    ),
+    radial-gradient(circle at 70% 50%, rgba(255, 0, 0, 0.7) 0%, transparent 50%),
+    linear-gradient(135deg, #1a0000 0%, #4a0000 30%, #990000 60%, #ff3300 100%) !important;
+}
+.mode-poster-1v1::before {
+  content: "VS";
+  position: absolute;
+  font-size: 42px;
+  font-family: "Orbitron", monospace;
+  font-weight: 900;
+  opacity: 0.08;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  letter-spacing: 3px;
+}
+.mode-poster-1v1 .mode-poster-emoji {
+  animation: float3d 2.5s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(255, 100, 0, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.4rem !important;
+}
+
+.mode-poster-2v2 {
+  background: radial-gradient(
+      circle at 20% 60%,
+      rgba(100, 0, 255, 0.8) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 80% 40%,
+      rgba(200, 0, 255, 0.6) 0%,
+      transparent 45%
+    ),
+    linear-gradient(135deg, #0a0020 0%, #200050 40%, #500090 70%, #9000d0 100%) !important;
+}
+.mode-poster-2v2 .mode-poster-emoji {
+  animation: float3d 3s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(150, 0, 255, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.2rem !important;
+}
+
+.mode-poster-squad {
+  background: radial-gradient(
+      ellipse at top,
+      rgba(0, 100, 200, 0.7) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at bottom,
+      rgba(0, 50, 150, 0.5) 0%,
+      transparent 50%
+    ), linear-gradient(180deg, #001230 0%, #001a50 50%, #002a80 100%) !important;
+}
+.mode-poster-squad .mode-poster-emoji {
+  animation: float3d 2.8s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(0, 100, 255, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.2rem !important;
+}
+
+.mode-poster-clash {
+  background: radial-gradient(
+      circle at 50% 30%,
+      rgba(255, 100, 0, 0.9) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 20% 80%,
+      rgba(255, 0, 50, 0.6) 0%,
+      transparent 40%
+    ),
+    linear-gradient(135deg, #1a0010 0%, #500010 40%, #aa0020 70%, #ff2030 100%) !important;
+}
+.mode-poster-clash .mode-poster-emoji {
+  animation: float3d 2.2s ease-in-out infinite, liveGlitch 3s ease infinite !important;
+  filter: drop-shadow(0 0 15px rgba(255, 50, 0, 1))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.4rem !important;
+}
+
+.mode-poster-br-solo {
+  background: radial-gradient(
+      circle at 50% 30%,
+      rgba(0, 200, 80, 0.7) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at bottom,
+      rgba(0, 100, 40, 0.5) 0%,
+      transparent 50%
+    ),
+    linear-gradient(180deg, #001500 0%, #002a00 40%, #004a00 70%, #007020 100%) !important;
+}
+.mode-poster-br-solo .mode-poster-emoji {
+  animation: float3d 3.5s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(0, 200, 80, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.2rem !important;
+}
+
+.mode-poster-br-duo {
+  background: radial-gradient(
+      circle at 30% 50%,
+      rgba(0, 150, 255, 0.7) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 70% 50%,
+      rgba(0, 80, 200, 0.5) 0%,
+      transparent 45%
+    ), linear-gradient(135deg, #000a20 0%, #001540 50%, #003080 100%) !important;
+}
+.mode-poster-br-duo .mode-poster-emoji {
+  animation: float3d 3.2s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.2rem !important;
+}
+
+.mode-poster-br-squad {
+  background: radial-gradient(
+      ellipse at 50% 0%,
+      rgba(180, 0, 255, 0.7) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(100, 0, 200, 0.5) 0%,
+      transparent 50%
+    ), linear-gradient(180deg, #0d0020 0%, #1a0040 50%, #300060 100%) !important;
+}
+.mode-poster-br-squad .mode-poster-emoji {
+  animation: float3d 2.7s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 12px rgba(180, 0, 255, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.2rem !important;
+}
+
+.mode-poster-highstakes {
+  background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 215, 0, 0.7) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 180, 0, 0.4) 0%,
+      transparent 40%
+    ),
+    linear-gradient(135deg, #1a1000 0%, #3a2800 40%, #705000 70%, #c08000 100%) !important;
+  animation: hologram 4s ease infinite !important;
+  background-size: 200% 200% !important;
+}
+.mode-poster-highstakes .mode-poster-emoji {
+  animation: float3d 2s ease-in-out infinite, glowPulse3d 2s ease infinite !important;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9)) !important;
+  font-size: 2.5rem !important;
+}
+
+/* Poster grid line overlay */
+.mode-poster-css::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 20px,
+      rgba(255, 255, 255, 0.015) 20px,
+      rgba(255, 255, 255, 0.015) 21px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 20px,
+      rgba(255, 255, 255, 0.015) 20px,
+      rgba(255, 255, 255, 0.015) 21px
+    ) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Scanline effect on posters */
+.mode-poster-css::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  ) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+.mode-poster-emoji {
+  z-index: 3 !important;
+  position: relative !important;
+}
+.mode-poster-text {
+  z-index: 3 !important;
+  position: relative !important;
+}
+.mode-poster-entry-badge {
+  z-index: 4 !important;
+}
+
+/* ── ULTRA 3D CARD STYLES ─────────────────────────────────────── */
+.card-3d {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05)
+    inset;
+}
+.card-3d:hover {
+  transform: perspective(800px) translateY(-4px) rotateX(2deg);
+  box-shadow: 0 20px 60px rgba(255, 107, 0, 0.25), 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+.card-3d::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  transition: left 0.5s;
+}
+.card-3d:hover::before {
+  left: 150%;
+}
+
+/* ── 3D MODE CARD HOVER UPGRADE ──────────────────────────────── */
+.mode-card {
+  transform-style: preserve-3d !important;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.mode-card:hover,
+.mode-card:active {
+  transform: perspective(600px) translateY(-6px) rotateX(3deg) scale(1.03) !important;
+  box-shadow: 0 24px 60px rgba(255, 107, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  border-color: rgba(255, 107, 0, 0.7) !important;
+}
+
+/* ── VIP BADGE SYSTEM ─────────────────────────────────────────── */
+.vip-badge-bronze {
+  background: linear-gradient(135deg, #cd7f32, #a0522d);
+  color: white;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  display: inline-block;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(205, 127, 50, 0.5);
+}
+.vip-badge-silver {
+  background: linear-gradient(135deg, #c0c0c0, #808080);
+  color: #111;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  display: inline-block;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.5);
+}
+.vip-badge-gold {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #111;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  display: inline-block;
+  letter-spacing: 0.5px;
+  animation: vipGlow 2s ease infinite;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+/* ── LOYALTY SYSTEM ──────────────────────────────────────────── */
+.loyalty-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+.loyalty-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ff6b00, #ffd700);
+  animation: progressGlow 2s ease infinite;
+  transition: width 1s ease;
+}
+
+.vip-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 215, 0, 0.12) 0%,
+    rgba(255, 107, 0, 0.06) 100%
+  );
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 24px rgba(255, 215, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+.vip-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffd700, transparent);
+  animation: metalSheen 2s linear infinite;
+  background-size: 200%;
+}
+
+/* ── DAILY MISSIONS ──────────────────────────────────────────── */
+.mission-card {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.08),
+    rgba(0, 100, 200, 0.05)
+  );
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12;
+  transition: all 0.3s;
+}
+.mission-card.completed {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 230, 118, 0.1),
+    rgba(0, 180, 90, 0.05)
+  );
+  border-color: rgba(0, 230, 118, 0.3);
+  opacity: 0.7;
+}
+.mission-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(0, 229, 255, 0.5));
+}
+.mission-progress {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mission-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00e5ff, #0088ff);
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+
+/* ── TOURNAMENT SYSTEM ───────────────────────────────────────── */
+.tournament-card {
+  background: linear-gradient(
+    135deg,
+    rgba(150, 0, 255, 0.15) 0%,
+    rgba(255, 107, 0, 0.05) 100%
+  );
+  border: 1px solid rgba(150, 0, 255, 0.3);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(150, 0, 255, 0.15);
+  transition: all 0.3s;
+}
+.tournament-card:hover {
+  border-color: rgba(150, 0, 255, 0.6);
+  box-shadow: 0 12px 48px rgba(150, 0, 255, 0.3);
+  transform: translateY(-3px);
+}
+.tournament-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #9c27b0, #ff6b00, #ffd700);
+}
+.tournament-status-open {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 230, 118, 0.2),
+    rgba(0, 180, 90, 0.1)
+  );
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  color: #00e676;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  display: inline-block;
+}
+.tournament-status-live {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 23, 68, 0.3),
+    rgba(200, 0, 50, 0.2)
+  );
+  border: 1px solid rgba(255, 23, 68, 0.5);
+  color: #ff1744;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  animation: livePulse 1s ease infinite;
+  display: inline-block;
+}
+.tournament-status-completed {
+  background: rgba(150, 0, 255, 0.15);
+  border: 1px solid rgba(150, 0, 255, 0.3);
+  color: #ce93d8;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "Orbitron", sans-serif;
+  display: inline-block;
+}
+.tournament-countdown {
+  font-family: "Orbitron", monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ff6b00;
+  text-align: center;
+  text-shadow: 0 0 20px rgba(255, 107, 0, 0.6);
+  animation: tournamentCountdown 1s ease infinite;
+  letter-spacing: 3px;
+  margin: 12px 0;
+}
+
+/* ── BATTLE PASS ─────────────────────────────────────────────── */
+.battlepass-bar {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  height: 20px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  margin: 8px 0;
+}
+.battlepass-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #ff6b00, #ffd700, #00e5ff);
+  transition: width 1s ease;
+  position: relative;
+  overflow: hidden;
+}
+.battlepass-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: metalSheen 1.5s linear infinite;
+  background-size: 200%;
+}
+
+/* ── CONFETTI OVERLAY ─────────────────────────────────────────── */
+.confetti-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+  overflow: hidden;
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  animation: confettiFall 2.5s ease forwards;
+  border-radius: 2px;
+}
+
+/* ── RANK-UP OVERLAY ─────────────────────────────────────────── */
+.rankup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9995;
+  background: rgba(5, 5, 16, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInUp 0.3s ease;
+}
+.rankup-badge {
+  font-size: 80px;
+  margin-bottom: 16px;
+  animation: rankPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 30px gold);
+}
+.rankup-title {
+  font-family: "Orbitron", sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  animation: titleGlow3d 2s ease infinite;
+}
+.rankup-subtitle {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 2px;
+}
+
+/* ── SESSION TIMEOUT MODAL ───────────────────────────────────── */
+.session-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(5, 5, 16, 0.92);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.session-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 23, 68, 0.15),
+    rgba(255, 107, 0, 0.08)
+  );
+  border: 1px solid rgba(255, 23, 68, 0.4);
+  border-radius: 20px;
+  padding: 28px 24px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(255, 23, 68, 0.2);
+}
+
+/* ── SCRATCH CARD ─────────────────────────────────────────────── */
+.scratch-card-container {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.4);
+  cursor: pointer;
+  user-select: none;
+  animation: vipGlow 2s ease infinite;
+}
+.scratch-revealed {
+  font-family: "Orbitron", sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  color: #1a0a00;
+  animation: rankPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── WELCOME CARD ULTRA ──────────────────────────────────────── */
+.welcome-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.15) 0%,
+    rgba(255, 50, 0, 0.08) 50%,
+    rgba(5, 5, 16, 0.98) 100%
+  ) !important;
+  border: 1px solid rgba(255, 107, 0, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(255, 107, 0, 0.15), 0 0 0 1px
+    rgba(255, 107, 0, 0.08) inset !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.welcome-card::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #ff6b00,
+    #ffd700,
+    #ff6b00,
+    transparent
+  ) !important;
+  animation: metalSheen 3s linear infinite !important;
+  background-size: 200% !important;
+}
+
+/* ── ENHANCED APP TITLE ANIMATION ────────────────────────────── */
+.app-title {
+  animation: neonFlicker 15s infinite !important;
+}
+
+/* ── 3D AVATAR ON PROFILE ─────────────────────────────────────── */
+.avatar-circle {
+  animation: glowPulse3d 3s ease infinite !important;
+  transition: transform 0.3s !important;
+}
+.avatar-circle:hover {
+  transform: scale(1.1) rotate(5deg) !important;
+}
+
+/* ── PROFILE HEADER SHEEN ────────────────────────────────────── */
+.profile-header {
+  position: relative !important;
+  overflow: hidden !important;
+}
+.profile-header::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 2px !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #ff6b00,
+    #ffd700,
+    #ff6b00,
+    transparent
+  ) !important;
+  animation: metalSheen 3s linear infinite !important;
+  background-size: 200% !important;
+}
+
+/* ── LEADERBOARD TOP BOXES UPGRADE ───────────────────────────── */
+.top-1-box::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #ffd700, #ff8c00, #ffd700) !important;
+  animation: metalSheen 2s linear infinite !important;
+  background-size: 200% !important;
+}
+
+/* ── STAT-BOX ENHANCED ───────────────────────────────────────── */
+.stat-box,
+.stat-card {
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.3s !important;
+}
+.stat-box::before,
+.stat-card::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 1px !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 107, 0, 0.5),
+    transparent
+  ) !important;
+}
+.stat-box:hover,
+.stat-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 30px rgba(255, 107, 0, 0.25) !important;
+}
+
+/* ── RANK CARD 3D UPGRADE ─────────────────────────────────────── */
+.rank-card {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.rank-card:hover {
+  transform: translateX(6px) scale(1.01) !important;
+  border-color: rgba(255, 107, 0, 0.4) !important;
+}
+
+/* ── FIRE BTN ULTRA 3D ────────────────────────────────────────── */
+.fire-btn {
+  transform-style: preserve-3d !important;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.fire-btn:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+}
+.fire-btn:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+
+/* ── NOTIFICATION BADGE PULSE ─────────────────────────────────── */
+.notification-badge {
+  animation: livePulse 1s ease infinite !important;
+}
+
+/* ── HERO BANNER 3D ──────────────────────────────────────────── */
+.hero-banner {
+  transform-style: preserve-3d !important;
+  transition: transform 0.3s !important;
+}
+.hero-banner:hover {
+  transform: perspective(1000px) rotateX(1.5deg) !important;
+}
+
+/* ── BADGE SYSTEM UPGRADE ─────────────────────────────────────── */
+.badge-live,
+.mode-live-badge {
+  animation: borderGlow 1.5s ease infinite !important;
+}
+
+/* ── QUICK ACTION CARD 3D HOVER ──────────────────────────────── */
+.quick-grid > button {
+  transform-style: preserve-3d !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.quick-grid > button:hover {
+  transform: perspective(500px) translateY(-8px) rotateX(5deg) scale(1.04) !important;
+}
+
+/* ── ADMIN HEADER NEON ───────────────────────────────────────── */
+.admin-title {
+  animation: titleGlow3d 3s ease infinite;
+}
+
+/* ── UPI BOX 3D GLOW ──────────────────────────────────────────── */
+.upi-box {
+  animation: glowPulse3d 4s ease infinite !important;
+  transform-style: preserve-3d !important;
+  transition: transform 0.3s !important;
+}
+.upi-box:hover {
+  transform: perspective(800px) rotateX(2deg) translateY(-4px) !important;
+}
+
+/* ── BOTTOM NAV ACTIVE 3D ─────────────────────────────────────── */
+.nav-item.active .nav-icon {
+  filter: drop-shadow(0 0 8px rgba(255, 107, 0, 0.9))
+    drop-shadow(0 0 16px rgba(255, 107, 0, 0.5)) !important;
+  transform: translateY(-3px) scale(1.1) !important;
+}
+
+/* ── ANNOUNCEMENT CARD BORDER LINE ───────────────────────────── */
+.announcement-card {
+  transition: all 0.3s !important;
+  position: relative !important;
+}
+.announcement-card::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 3px !important;
+  background: linear-gradient(180deg, #ff6b00, #ffd700) !important;
+  border-radius: 3px 0 0 3px !important;
+}
+.announcement-card:hover {
+  border-color: rgba(255, 107, 0, 0.4) !important;
+  box-shadow: 0 6px 24px rgba(255, 107, 0, 0.12) !important;
+  transform: translateX(4px) !important;
+}
+
+/* ── LIST ITEM 3D HOVER ──────────────────────────────────────── */
+.list-item {
+  transition: all 0.25s !important;
+}
+.list-item:hover {
+  transform: translateX(4px) !important;
+  border-color: rgba(255, 107, 0, 0.3) !important;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.1) !important;
+}
+
+/* ── CARD GENERIC 3D HOVER ────────────────────────────────────── */
+.card {
+  transition: all 0.25s !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.card:hover {
+  box-shadow: 0 8px 32px rgba(255, 107, 0, 0.12) !important;
+}
+
+/* ── MATCH HISTORY CARD ──────────────────────────────────────── */
+.match-card {
+  transition: all 0.3s !important;
+}
+.match-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: rgba(255, 107, 0, 0.4) !important;
+  box-shadow: 0 12px 40px rgba(255, 107, 0, 0.15) !important;
+}
+
+/* ── REVENUE/PROFIT CARDS ─────────────────────────────────────── */
+.revenue-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  background: linear-gradient(
+    145deg,
+    rgba(0, 230, 118, 0.12),
+    rgba(0, 180, 90, 0.05)
+  );
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  transition: all 0.3s;
+}
+.revenue-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 230, 118, 0.2);
+}
+.revenue-profit-highlight {
+  font-family: "Orbitron", sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: #00e676;
+  text-shadow: 0 0 15px rgba(0, 230, 118, 0.5);
+}
+
+/* ── SCROLL CONTAINER SMOOTH ─────────────────────────────────── */
+.main-content,
+.view-container {
+  scroll-behavior: smooth !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* ── FOOTER PREMIUM ──────────────────────────────────────────── */
+.footer-text {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.72rem;
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: 0.5px;
+}
+.footer-text a {
+  color: rgba(255, 107, 0, 0.7);
+  text-decoration: underline;
+}
+
+/* ── LOADING SPINNER NEON ────────────────────────────────────── */
+.spinner {
+  border-color: rgba(255, 107, 0, 0.2) !important;
+  border-top-color: #ff6b00 !important;
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.3) !important;
+}
+
+/* ── PROGRESS BAR GLOW ───────────────────────────────────────── */
+.progress-bar {
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  animation: progressGlow 2s ease infinite;
+}
+
+/* ── CHAT BUBBLE UPGRADE ──────────────────────────────────────── */
+.chat-bubble-sent {
+  background: linear-gradient(135deg, #ff6b00, #cc4400) !important;
+  box-shadow: 0 2px 10px rgba(255, 107, 0, 0.3) !important;
+}
+
+/* ── ROOM INFO BOX UPGRADE ────────────────────────────────────── */
+.room-info-box {
+  animation: borderGlow 3s ease infinite !important;
+}
+
+/* ── SELECT DROPDOWN ──────────────────────────────────────────── */
+select,
+.fire-input[as="select"] {
+  background: #0d0d24 !important;
+  color: white !important;
+}
+select option {
+  background: #0d0d24 !important;
+  color: white !important;
+}
+
+/* ── BLOCKED SCREEN ──────────────────────────────────────────── */
+.blocked-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+      ellipse at center,
+      rgba(239, 68, 68, 0.15) 0%,
+      transparent 70%
+    ), #050510;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+/* ── SPLASH SCREEN ULTRA ─────────────────────────────────────── */
+.splash-screen {
+  min-height: 100vh;
+  background: #050510;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+      ellipse at 30% 50%,
+      rgba(255, 107, 0, 0.15) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 50%,
+      rgba(150, 0, 255, 0.1) 0%,
+      transparent 50%
+    ), #050510;
+}
+
+/* ── MODAL UPGRADE ───────────────────────────────────────────── */
+.modal-sheet {
+  border: 1px solid rgba(255, 107, 0, 0.25) !important;
+  box-shadow: 0 -20px 60px rgba(255, 107, 0, 0.15), 0 -2px 0
+    rgba(255, 107, 0, 0.1) inset !important;
+}
+
+/* ── DHURANDAR TITLE UPGRADE ─────────────────────────────────── */
+.dhurandar-title {
+  filter: drop-shadow(0 0 20px rgba(255, 107, 0, 0.6)) !important;
+}
+
+/* ── NAV ITEM ACTIVE GLOW ─────────────────────────────────────── */
+.nav-item {
+  transition: all 0.2s !important;
+}
+.nav-item:active {
+  transform: scale(0.92) !important;
+}
+
+/* ── MODE TITLE NEON ─────────────────────────────────────────── */
+.mode-title {
+  text-shadow: 0 0 8px rgba(255, 107, 0, 0.4) !important;
+}
+
+/* ── FIELD LABEL UPGRADE ──────────────────────────────────────── */
+.field-label {
+  letter-spacing: 1.5px !important;
+}
+
+/* ── INPUT FOCUS GLOW ─────────────────────────────────────────── */
+.fire-input:focus {
+  border-color: rgba(255, 107, 0, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1), 0 0 15px rgba(255, 107, 0, 0.15) !important;
+}
+
+/* ── LIVE BADGE BLINK UPGRADE ─────────────────────────────────── */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 0, 64, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px rgba(255, 0, 64, 0.8);
+  }
+}
+.badge-live {
+  animation: live-pulse 1.2s ease infinite !important;
+}
+
+/* ── SECTION LABEL UPGRADED ───────────────────────────────────── */
+.section-label {
+  position: relative !important;
+}
+
+/* ── CLAN VIEW ────────────────────────────────────────────────── */
+.clan-card {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.08),
+    rgba(0, 100, 200, 0.04)
+  );
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s;
+}
+.clan-card:hover {
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 229, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* ── GLOBAL CHAT MSG UPGRADE ──────────────────────────────────── */
+.chat-msg-admin {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.15),
+    rgba(255, 107, 0, 0.05)
+  );
+  border: 1px solid rgba(255, 107, 0, 0.25);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
