@@ -57,7 +57,6 @@ body {
   color: #ffffff;
   font-family: "Rajdhani", "Orbitron", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior: none;
   overscroll-behavior-y: none;
@@ -68,7 +67,7 @@ body {
 #root {
   height: 100%;
   height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -203,7 +202,7 @@ a {
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  overflow-y: hidden;
+  overflow-y: auto;
   will-change: auto;
   contain: layout style;
 }
@@ -1676,7 +1675,7 @@ body.light-mode .bottom-nav {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scroll-behavior: smooth;
-  height: 100%;
+  min-height: 0;
   will-change: scroll-position;
 }
 
