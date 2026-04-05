@@ -52,17 +52,23 @@
 html,
 body {
   height: 100%;
+  height: 100dvh;
   background: #0a0a1a;
   color: #ffffff;
   font-family: "Rajdhani", "Orbitron", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
   overflow-x: hidden;
-  overflow-y: auto;
   overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -188,15 +194,18 @@ a {
    ================================================================ */
 .app-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--navy);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
+  will-change: auto;
+  contain: layout style;
 }
 
 .app-header {
@@ -205,7 +214,7 @@ a {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: 430px;
   z-index: 50;
   background: linear-gradient(
     180deg,
@@ -560,7 +569,7 @@ select.fire-input {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: 430px;
   z-index: 50;
   background: linear-gradient(0deg, #0d0d1f 0%, rgba(13, 13, 31, 0.95) 100%);
   border-top: 1px solid rgba(255, 107, 0, 0.2);
@@ -764,7 +773,7 @@ select.fire-input {
 
 .modal-sheet {
   width: 100%;
-  max-width: 480px;
+  max-width: 430px;
   background: linear-gradient(180deg, #111122 0%, #0a0a1a 100%);
   border: 1px solid rgba(255, 107, 0, 0.3);
   border-radius: 24px 24px 0 0;
@@ -1665,7 +1674,10 @@ body.light-mode .bottom-nav {
   overflow-x: hidden;
   padding: 68px 14px 90px;
   -webkit-overflow-scrolling: touch;
-  min-height: 100vh;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  height: 100%;
+  will-change: scroll-position;
 }
 
 /* ================================================================
@@ -4165,4 +4177,63 @@ select option {
   border-radius: 12px;
   padding: 10px 14px;
   margin-bottom: 8px;
+}
+
+/* ================================================================
+   MOBILE OPTIMIZATION — prevents pull-to-refresh, fixes big-screen feel
+   ================================================================ */
+@media (max-width: 430px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .main-content {
+    padding: 60px 10px 76px;
+  }
+
+  .mode-card-title {
+    font-size: 0.88rem;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .welcome-card {
+    padding: 12px 14px;
+  }
+
+  .mode-card,
+  .quick-card,
+  .match-card,
+  .card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .app-title {
+    font-size: 0.88rem;
+  }
+
+  .coin-display {
+    font-size: 0.8rem;
+  }
+
+  .bottom-nav-btn span {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .main-content {
+    padding: 58px 8px 74px;
+  }
+
+  .section-label {
+    font-size: 0.75rem;
+  }
+
+  .mode-card-title {
+    font-size: 0.82rem;
+  }
 }
