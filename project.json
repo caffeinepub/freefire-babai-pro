@@ -1,0 +1,29 @@
+{
+  "overview": "MR.SONIC FF is a professional Free Fire tournament platform PWA with custom authentication, wallet management, match scheduling, admin controls, VIP tiers, gamification, real-time messaging, and 150+ features designed for competitive esports players.",
+  "features": [
+    "Custom UID+password tournament registration",
+    "Real-time match scheduling with room ID reveal",
+    "Wallet system with deposits, withdrawals, and coin conversion",
+    "Admin profit dashboard with 10% auto-commission",
+    "VIP tier system (Bronze/Silver/Gold)",
+    "Daily missions, battle pass, and gamification",
+    "Push notifications via Firebase Cloud Messaging",
+    "Real-time admin broadcast messaging",
+    "Leaderboard with Top 1/5/10 rankings",
+    "Tournament arena with bracket and countdown",
+    "Clan system, PvP challenges, and social features",
+    "PWA installable with instant updates"
+  ],
+  "category": "gaming-esports",
+  "tags": [
+    "free-fire",
+    "tournament",
+    "esports",
+    "gaming",
+    "pwa",
+    "wallet",
+    "leaderboard",
+    "admin-panel"
+  ],
+  "last_updated": "2026-04-07T21:45:02.949Z"
+}

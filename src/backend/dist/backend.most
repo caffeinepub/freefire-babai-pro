@@ -1,0 +1,192 @@
+// Version: 3.0.0
+type Clan__998698249 =
+  {
+    createdAt : Int;
+    id : Text;
+    leaderId : Text;
+    members : [Text];
+    name : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Match__564601088 =
+  {
+    adminProfit : Float;
+    createdAt : Int;
+    currentPlayers : Nat;
+    entryFee : Float;
+    id : Text;
+    isHidden : Bool;
+    joinedPlayers : [(Text, Text)];
+    kills : [(Text, Nat)];
+    maxPlayers : Nat;
+    mode : Text;
+    perKill : Float;
+    prizePool : Float;
+    roomId : Text;
+    roomPassword : Text;
+    scheduledTime : Text;
+    status : Text;
+    title : Text;
+    voiceChannelLink : Text;
+    winner : Text
+  };
+type Message__19119041 =
+  {
+    category : Text;
+    createdAt : Int;
+    id : Text;
+    imageUrl : Text;
+    isPinned : Bool;
+    reactions : [(Text, Text)];
+    senderId : Text;
+    senderName : Text;
+    text : Text
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OldAccessControlState__841599830 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__605269027<Principal, UserRole__717262347>
+  };
+type OldMatchStatus__908451681 = {#completed; #inProgress; #waiting};
+type OldMatch__227272324 =
+  {
+    id : Nat;
+    player : Principal;
+    status : OldMatchStatus__908451681;
+    timestamp : Int
+  };
+type OldUserProfile__416069324 =
+  {password : Text; username : Text; wallet : Nat};
+type OldWalletTransactionStatus__299857381 = {#approved; #pending; #rejected};
+type OldWalletTransaction__334249798 =
+  {
+    amount : Nat;
+    id : Nat;
+    status : OldWalletTransactionStatus__299857381;
+    timestamp : Int;
+    transactionType : {#deposit; #withdrawal};
+    user : Principal
+  };
+type Report__89520890 =
+  {
+    createdAt : Int;
+    id : Text;
+    reason : Text;
+    reportedId : Text;
+    reporterId : Text
+  };
+type Tournament__586792266 =
+  {
+    createdAt : Int;
+    entryFee : Float;
+    id : Text;
+    name : Text;
+    prizePool : Float;
+    registeredPlayers : [Text];
+    startTime : Int;
+    status : Text;
+    winner : Text
+  };
+type Transaction__865268250 =
+  {
+    amount : Float;
+    coins : Nat;
+    createdAt : Int;
+    id : Text;
+    note : Text;
+    status : Text;
+    txType : Text;
+    uid : Text;
+    upiId : Text
+  };
+type UserRole__717262347 = {#admin; #guest; #user};
+type User__831686142 =
+  {
+    banReason : Text;
+    birthMonth : Nat;
+    coins : Nat;
+    createdAt : Int;
+    fcmToken : Text;
+    isAdmin : Bool;
+    isBanned : Bool;
+    kycVerified : Bool;
+    lastLoginAt : Int;
+    lastLoginDate : Text;
+    loginStreak : Nat;
+    loyaltyPoints : Nat;
+    name : Text;
+    password : Text;
+    phone : Text;
+    referralCode : Text;
+    referredBy : Text;
+    totalKills : Nat;
+    totalMatchesPlayed : Nat;
+    totalWins : Nat;
+    uid : Text;
+    vipTier : Text;
+    walletBalance : Float
+  };
+actor ({
+  in accessControlState : OldAccessControlState__841599830;
+  in matchIdCounter : Nat;
+  in matches : Map__605269027<Nat, OldMatch__227272324>;
+  in transactionIdCounter : Nat;
+  in userProfiles : Map__605269027<Principal, OldUserProfile__416069324>;
+  in walletTransactions :
+    Map__605269027<Nat, OldWalletTransaction__334249798>
+}, {
+  stable var clanIdCounter : Nat;
+  stable clans :
+    {
+      var root : Node__46230540<Text, Clan__998698249>;
+      var size : Nat__490723111
+    };
+  stable var matchIdCounter : Nat;
+  stable matches :
+    {
+      var root : Node__46230540<Text, Match__564601088>;
+      var size : Nat__490723111
+    };
+  stable messages :
+    {
+      var root : Node__46230540<Text, Message__19119041>;
+      var size : Nat__490723111
+    };
+  stable var msgIdCounter : Nat;
+  stable var reportIdCounter : Nat;
+  stable reports :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Report__89520890]];
+      var elementIndex : Nat__490723111
+    };
+  stable tournaments :
+    {
+      var root : Node__46230540<Text, Tournament__586792266>;
+      var size : Nat__490723111
+    };
+  stable var tourneyIdCounter : Nat;
+  stable transactions :
+    {
+      var root : Node__46230540<Text, Transaction__865268250>;
+      var size : Nat__490723111
+    };
+  stable var txIdCounter : Nat;
+  stable users :
+    {
+      var root : Node__46230540<Text, User__831686142>;
+      var size : Nat__490723111
+    }
+}) ;

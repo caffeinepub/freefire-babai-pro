@@ -7,79 +7,167 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export type Time = bigint;
-export interface WalletTransaction {
-    id: bigint;
-    status: WalletTransactionStatus;
-    transactionType: Variant_deposit_withdrawal;
-    user: Principal;
-    timestamp: Time;
-    amount: bigint;
+export interface Clan {
+    id: string;
+    members: Array<string>;
+    leaderId: string;
+    name: string;
+    createdAt: bigint;
+}
+export interface UserPublic {
+    uid: string;
+    lastLoginDate: string;
+    referralCode: string;
+    fcmToken: string;
+    lastLoginAt: bigint;
+    loginStreak: bigint;
+    kycVerified: boolean;
+    name: string;
+    createdAt: bigint;
+    coins: bigint;
+    totalWins: bigint;
+    loyaltyPoints: bigint;
+    banReason: string;
+    referredBy: string;
+    birthMonth: bigint;
+    isBanned: boolean;
+    isAdmin: boolean;
+    vipTier: string;
+    totalKills: bigint;
+    walletBalance: number;
+    totalMatchesPlayed: bigint;
+}
+export interface Tournament {
+    id: string;
+    startTime: bigint;
+    status: string;
+    registeredPlayers: Array<string>;
+    name: string;
+    createdAt: bigint;
+    winner: string;
+    entryFee: number;
+    prizePool: number;
+}
+export interface Message {
+    id: string;
+    createdAt: bigint;
+    text: string;
+    imageUrl: string;
+    senderName: string;
+    category: string;
+    isPinned: boolean;
+    reactions: Array<[string, string]>;
+    senderId: string;
 }
 export interface Match {
-    id: bigint;
-    status: MatchStatus;
-    player: Principal;
-    timestamp: Time;
+    id: string;
+    status: string;
+    title: string;
+    voiceChannelLink: string;
+    scheduledTime: string;
+    mode: string;
+    createdAt: bigint;
+    winner: string;
+    perKill: number;
+    roomPassword: string;
+    currentPlayers: bigint;
+    isHidden: boolean;
+    entryFee: number;
+    joinedPlayers: Array<[string, string]>;
+    roomId: string;
+    kills: Array<[string, bigint]>;
+    maxPlayers: bigint;
+    prizePool: number;
+    adminProfit: number;
 }
-export interface UserProfile {
-    username: string;
-    password: string;
-    wallet: bigint;
+export interface UserAdmin {
+    uid: string;
+    lastLoginDate: string;
+    referralCode: string;
+    lastLoginAt: bigint;
+    loginStreak: bigint;
+    kycVerified: boolean;
+    name: string;
+    createdAt: bigint;
+    coins: bigint;
+    totalWins: bigint;
+    loyaltyPoints: bigint;
+    banReason: string;
+    referredBy: string;
+    birthMonth: bigint;
+    isBanned: boolean;
+    isAdmin: boolean;
+    phone: string;
+    vipTier: string;
+    totalKills: bigint;
+    walletBalance: number;
+    totalMatchesPlayed: bigint;
 }
-export enum MatchStatus {
-    completed = "completed",
-    waiting = "waiting",
-    inProgress = "inProgress"
+export interface Report {
+    id: string;
+    createdAt: bigint;
+    reportedId: string;
+    reporterId: string;
+    reason: string;
 }
-export enum UserRole {
-    admin = "admin",
-    user = "user",
-    guest = "guest"
-}
-export enum Variant_deposit_withdrawal {
-    deposit = "deposit",
-    withdrawal = "withdrawal"
-}
-export enum WalletTransactionStatus {
-    pending = "pending",
-    approved = "approved",
-    rejected = "rejected"
+export interface Transaction {
+    id: string;
+    uid: string;
+    status: string;
+    note: string;
+    createdAt: bigint;
+    coins: bigint;
+    upiId: string;
+    txType: string;
+    amount: number;
 }
 export interface backendInterface {
-    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getAllUsers(): Promise<Array<UserProfile>>;
-    getAllUsersWithWalletOver(amount: bigint): Promise<Array<UserProfile>>;
-    getAllWalletTransactions(): Promise<Array<WalletTransaction>>;
-    /**
-     * / Returns the caller's user profile.
-     */
-    getCallerUserProfile(): Promise<UserProfile>;
-    getCallerUserRole(): Promise<UserRole>;
+    adminAdjustCoins(adminUid: string, targetUid: string, coins: bigint): Promise<void>;
+    adminAdjustWallet(adminUid: string, targetUid: string, amount: number, note: string): Promise<void>;
+    adminAssignKills(adminUid: string, matchId: string, killData: Array<[string, bigint]>): Promise<void>;
+    adminBanUser(adminUid: string, targetUid: string, reason: string): Promise<void>;
+    adminCreateMatch(adminUid: string, mode: string, title: string, entryFee: number, prizePool: number, perKill: number, maxPlayers: bigint, scheduledTime: string): Promise<string>;
+    adminCreateTournament(adminUid: string, name: string, entryFee: number, prizePool: number, startTime: bigint): Promise<string>;
+    adminDeclareTournamentWinner(adminUid: string, tournamentId: string, winnerUid: string): Promise<void>;
+    adminDeclareWinner(adminUid: string, matchId: string, winnerUid: string): Promise<void>;
+    adminGetAllMatches(adminUid: string): Promise<Array<Match>>;
+    adminGetAllTransactions(adminUid: string): Promise<Array<Transaction>>;
+    adminGetAllUsers(adminUid: string): Promise<Array<UserAdmin>>;
+    adminGetReports(adminUid: string): Promise<Array<Report>>;
+    adminGetRevenue(adminUid: string): Promise<{
+        totalCollected: number;
+        totalWithdrawals: number;
+        totalPrizesPaid: number;
+        totalDeposits: number;
+        netProfit: number;
+    }>;
+    adminPinMessage(adminUid: string, msgId: string, pin: boolean): Promise<void>;
+    adminSendMessage(adminUid: string, text: string, category: string, imageUrl: string, isPinned: boolean): Promise<string>;
+    adminSetKyc(adminUid: string, targetUid: string, verified: boolean): Promise<void>;
+    adminSetMatchRoom(adminUid: string, matchId: string, roomId: string, roomPassword: string): Promise<void>;
+    adminSetVoiceLink(adminUid: string, matchId: string, link: string): Promise<void>;
+    adminToggleMatchVisibility(adminUid: string, matchId: string): Promise<void>;
+    adminUnbanUser(adminUid: string, targetUid: string): Promise<void>;
+    adminUpdateMatchStatus(adminUid: string, matchId: string, status: string): Promise<void>;
+    adminUpdateTransaction(adminUid: string, txId: string, status: string): Promise<void>;
+    createClan(uid: string, name: string): Promise<string>;
+    getClans(): Promise<Array<Clan>>;
+    getLeaderboard(): Promise<Array<UserPublic>>;
+    getMatch(matchId: string): Promise<Match | null>;
     getMatches(): Promise<Array<Match>>;
-    getPendingPayments(): Promise<Array<WalletTransaction>>;
-    getUserProfile(user: Principal): Promise<UserProfile>;
-    getUserProfileByUsername(username: string): Promise<UserProfile>;
-    getUsersSortedByWallet(): Promise<Array<UserProfile>>;
-    getWalletBalance(): Promise<bigint>;
-    getWithdrawals(): Promise<Array<WalletTransaction>>;
-    hasUserTransaction(user: Principal, transactionType: Variant_deposit_withdrawal): Promise<boolean>;
-    isCallerAdmin(): Promise<boolean>;
-    isRegistered(user: Principal): Promise<boolean>;
-    joinMatch(): Promise<void>;
-    /**
-     * / Returns true if the input password matches the user's password.
-     */
-    login(password: string): Promise<boolean>;
-    /**
-     * / Registers a new user profile with the provided username and password.
-     */
-    register(username: string, password: string): Promise<void>;
-    requestWithdraw(amount: bigint): Promise<void>;
-    /**
-     * / Saves the user profile for the caller.
-     */
-    saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitPayment(amount: bigint): Promise<void>;
-    updateWalletTransactionStatus(transactionId: bigint): Promise<void>;
+    getMessages(): Promise<Array<Message>>;
+    getMyProfile(uid: string): Promise<UserPublic | null>;
+    getTournaments(): Promise<Array<Tournament>>;
+    getUserTransactions(uid: string): Promise<Array<Transaction>>;
+    joinClan(uid: string, clanId: string): Promise<string>;
+    joinMatch(uid: string, matchId: string): Promise<string>;
+    login(uid: string, password: string): Promise<[UserPublic | null, string]>;
+    reactToMessage(uid: string, msgId: string, emoji: string): Promise<void>;
+    registerForTournament(uid: string, tournamentId: string): Promise<string>;
+    registerUser(uid: string, password: string, name: string, phone: string, referredBy: string): Promise<string>;
+    reportPlayer(reporterId: string, reportedId: string, reason: string): Promise<void>;
+    submitDeposit(uid: string, amount: number, upiId: string): Promise<string>;
+    submitWithdrawal(uid: string, amount: number, upiId: string): Promise<string>;
+    updateFcmToken(uid: string, token: string): Promise<void>;
+    updateProfile(uid: string, name: string, phone: string, birthMonth: bigint): Promise<void>;
 }

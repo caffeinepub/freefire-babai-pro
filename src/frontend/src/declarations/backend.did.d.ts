@@ -10,76 +10,196 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Clan {
+  'id' : string,
+  'members' : Array<string>,
+  'leaderId' : string,
+  'name' : string,
+  'createdAt' : bigint,
+}
 export interface Match {
-  'id' : bigint,
-  'status' : MatchStatus,
-  'player' : Principal,
-  'timestamp' : Time,
+  'id' : string,
+  'status' : string,
+  'title' : string,
+  'voiceChannelLink' : string,
+  'scheduledTime' : string,
+  'mode' : string,
+  'createdAt' : bigint,
+  'winner' : string,
+  'perKill' : number,
+  'roomPassword' : string,
+  'currentPlayers' : bigint,
+  'isHidden' : boolean,
+  'entryFee' : number,
+  'joinedPlayers' : Array<[string, string]>,
+  'roomId' : string,
+  'kills' : Array<[string, bigint]>,
+  'maxPlayers' : bigint,
+  'prizePool' : number,
+  'adminProfit' : number,
 }
-export type MatchStatus = { 'completed' : null } |
-  { 'waiting' : null } |
-  { 'inProgress' : null };
-export type Time = bigint;
-export interface UserProfile {
-  'username' : string,
-  'password' : string,
-  'wallet' : bigint,
+export interface Message {
+  'id' : string,
+  'createdAt' : bigint,
+  'text' : string,
+  'imageUrl' : string,
+  'senderName' : string,
+  'category' : string,
+  'isPinned' : boolean,
+  'reactions' : Array<[string, string]>,
+  'senderId' : string,
 }
-export type UserRole = { 'admin' : null } |
-  { 'user' : null } |
-  { 'guest' : null };
-export interface WalletTransaction {
-  'id' : bigint,
-  'status' : WalletTransactionStatus,
-  'transactionType' : { 'deposit' : null } |
-    { 'withdrawal' : null },
-  'user' : Principal,
-  'timestamp' : Time,
-  'amount' : bigint,
+export interface Report {
+  'id' : string,
+  'createdAt' : bigint,
+  'reportedId' : string,
+  'reporterId' : string,
+  'reason' : string,
 }
-export type WalletTransactionStatus = { 'pending' : null } |
-  { 'approved' : null } |
-  { 'rejected' : null };
+export interface Tournament {
+  'id' : string,
+  'startTime' : bigint,
+  'status' : string,
+  'registeredPlayers' : Array<string>,
+  'name' : string,
+  'createdAt' : bigint,
+  'winner' : string,
+  'entryFee' : number,
+  'prizePool' : number,
+}
+export interface Transaction {
+  'id' : string,
+  'uid' : string,
+  'status' : string,
+  'note' : string,
+  'createdAt' : bigint,
+  'coins' : bigint,
+  'upiId' : string,
+  'txType' : string,
+  'amount' : number,
+}
+export interface UserAdmin {
+  'uid' : string,
+  'lastLoginDate' : string,
+  'referralCode' : string,
+  'lastLoginAt' : bigint,
+  'loginStreak' : bigint,
+  'kycVerified' : boolean,
+  'name' : string,
+  'createdAt' : bigint,
+  'coins' : bigint,
+  'totalWins' : bigint,
+  'loyaltyPoints' : bigint,
+  'banReason' : string,
+  'referredBy' : string,
+  'birthMonth' : bigint,
+  'isBanned' : boolean,
+  'isAdmin' : boolean,
+  'phone' : string,
+  'vipTier' : string,
+  'totalKills' : bigint,
+  'walletBalance' : number,
+  'totalMatchesPlayed' : bigint,
+}
+export interface UserPublic {
+  'uid' : string,
+  'lastLoginDate' : string,
+  'referralCode' : string,
+  'fcmToken' : string,
+  'lastLoginAt' : bigint,
+  'loginStreak' : bigint,
+  'kycVerified' : boolean,
+  'name' : string,
+  'createdAt' : bigint,
+  'coins' : bigint,
+  'totalWins' : bigint,
+  'loyaltyPoints' : bigint,
+  'banReason' : string,
+  'referredBy' : string,
+  'birthMonth' : bigint,
+  'isBanned' : boolean,
+  'isAdmin' : boolean,
+  'vipTier' : string,
+  'totalKills' : bigint,
+  'walletBalance' : number,
+  'totalMatchesPlayed' : bigint,
+}
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
-  'getAllUsersWithWalletOver' : ActorMethod<[bigint], Array<UserProfile>>,
-  'getAllWalletTransactions' : ActorMethod<[], Array<WalletTransaction>>,
-  /**
-   * / Returns the caller's user profile.
-   */
-  'getCallerUserProfile' : ActorMethod<[], UserProfile>,
-  'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getMatches' : ActorMethod<[], Array<Match>>,
-  'getPendingPayments' : ActorMethod<[], Array<WalletTransaction>>,
-  'getUserProfile' : ActorMethod<[Principal], UserProfile>,
-  'getUserProfileByUsername' : ActorMethod<[string], UserProfile>,
-  'getUsersSortedByWallet' : ActorMethod<[], Array<UserProfile>>,
-  'getWalletBalance' : ActorMethod<[], bigint>,
-  'getWithdrawals' : ActorMethod<[], Array<WalletTransaction>>,
-  'hasUserTransaction' : ActorMethod<
-    [Principal, { 'deposit' : null } | { 'withdrawal' : null }],
-    boolean
+  'adminAdjustCoins' : ActorMethod<[string, string, bigint], undefined>,
+  'adminAdjustWallet' : ActorMethod<
+    [string, string, number, string],
+    undefined
   >,
-  'isCallerAdmin' : ActorMethod<[], boolean>,
-  'isRegistered' : ActorMethod<[Principal], boolean>,
-  'joinMatch' : ActorMethod<[], undefined>,
-  /**
-   * / Returns true if the input password matches the user's password.
-   */
-  'login' : ActorMethod<[string], boolean>,
-  /**
-   * / Registers a new user profile with the provided username and password.
-   */
-  'register' : ActorMethod<[string, string], undefined>,
-  'requestWithdraw' : ActorMethod<[bigint], undefined>,
-  /**
-   * / Saves the user profile for the caller.
-   */
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'submitPayment' : ActorMethod<[bigint], undefined>,
-  'updateWalletTransactionStatus' : ActorMethod<[bigint], undefined>,
+  'adminAssignKills' : ActorMethod<
+    [string, string, Array<[string, bigint]>],
+    undefined
+  >,
+  'adminBanUser' : ActorMethod<[string, string, string], undefined>,
+  'adminCreateMatch' : ActorMethod<
+    [string, string, string, number, number, number, bigint, string],
+    string
+  >,
+  'adminCreateTournament' : ActorMethod<
+    [string, string, number, number, bigint],
+    string
+  >,
+  'adminDeclareTournamentWinner' : ActorMethod<
+    [string, string, string],
+    undefined
+  >,
+  'adminDeclareWinner' : ActorMethod<[string, string, string], undefined>,
+  'adminGetAllMatches' : ActorMethod<[string], Array<Match>>,
+  'adminGetAllTransactions' : ActorMethod<[string], Array<Transaction>>,
+  'adminGetAllUsers' : ActorMethod<[string], Array<UserAdmin>>,
+  'adminGetReports' : ActorMethod<[string], Array<Report>>,
+  'adminGetRevenue' : ActorMethod<
+    [string],
+    {
+      'totalCollected' : number,
+      'totalWithdrawals' : number,
+      'totalPrizesPaid' : number,
+      'totalDeposits' : number,
+      'netProfit' : number,
+    }
+  >,
+  'adminPinMessage' : ActorMethod<[string, string, boolean], undefined>,
+  'adminSendMessage' : ActorMethod<
+    [string, string, string, string, boolean],
+    string
+  >,
+  'adminSetKyc' : ActorMethod<[string, string, boolean], undefined>,
+  'adminSetMatchRoom' : ActorMethod<
+    [string, string, string, string],
+    undefined
+  >,
+  'adminSetVoiceLink' : ActorMethod<[string, string, string], undefined>,
+  'adminToggleMatchVisibility' : ActorMethod<[string, string], undefined>,
+  'adminUnbanUser' : ActorMethod<[string, string], undefined>,
+  'adminUpdateMatchStatus' : ActorMethod<[string, string, string], undefined>,
+  'adminUpdateTransaction' : ActorMethod<[string, string, string], undefined>,
+  'createClan' : ActorMethod<[string, string], string>,
+  'getClans' : ActorMethod<[], Array<Clan>>,
+  'getLeaderboard' : ActorMethod<[], Array<UserPublic>>,
+  'getMatch' : ActorMethod<[string], [] | [Match]>,
+  'getMatches' : ActorMethod<[], Array<Match>>,
+  'getMessages' : ActorMethod<[], Array<Message>>,
+  'getMyProfile' : ActorMethod<[string], [] | [UserPublic]>,
+  'getTournaments' : ActorMethod<[], Array<Tournament>>,
+  'getUserTransactions' : ActorMethod<[string], Array<Transaction>>,
+  'joinClan' : ActorMethod<[string, string], string>,
+  'joinMatch' : ActorMethod<[string, string], string>,
+  'login' : ActorMethod<[string, string], [[] | [UserPublic], string]>,
+  'reactToMessage' : ActorMethod<[string, string, string], undefined>,
+  'registerForTournament' : ActorMethod<[string, string], string>,
+  'registerUser' : ActorMethod<
+    [string, string, string, string, string],
+    string
+  >,
+  'reportPlayer' : ActorMethod<[string, string, string], undefined>,
+  'submitDeposit' : ActorMethod<[string, number, string], string>,
+  'submitWithdrawal' : ActorMethod<[string, number, string], string>,
+  'updateFcmToken' : ActorMethod<[string, string], undefined>,
+  'updateProfile' : ActorMethod<[string, string, string, bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -1,0 +1,194 @@
+type UserPublic = 
+ record {
+   banReason: text;
+   birthMonth: nat;
+   coins: nat;
+   createdAt: int;
+   fcmToken: text;
+   isAdmin: bool;
+   isBanned: bool;
+   kycVerified: bool;
+   lastLoginAt: int;
+   lastLoginDate: text;
+   loginStreak: nat;
+   loyaltyPoints: nat;
+   name: text;
+   referralCode: text;
+   referredBy: text;
+   totalKills: nat;
+   totalMatchesPlayed: nat;
+   totalWins: nat;
+   uid: text;
+   vipTier: text;
+   walletBalance: float64;
+ };
+type UserAdmin = 
+ record {
+   banReason: text;
+   birthMonth: nat;
+   coins: nat;
+   createdAt: int;
+   isAdmin: bool;
+   isBanned: bool;
+   kycVerified: bool;
+   lastLoginAt: int;
+   lastLoginDate: text;
+   loginStreak: nat;
+   loyaltyPoints: nat;
+   name: text;
+   phone: text;
+   referralCode: text;
+   referredBy: text;
+   totalKills: nat;
+   totalMatchesPlayed: nat;
+   totalWins: nat;
+   uid: text;
+   vipTier: text;
+   walletBalance: float64;
+ };
+type Transaction = 
+ record {
+   amount: float64;
+   coins: nat;
+   createdAt: int;
+   id: text;
+   note: text;
+   status: text;
+   txType: text;
+   uid: text;
+   upiId: text;
+ };
+type Tournament = 
+ record {
+   createdAt: int;
+   entryFee: float64;
+   id: text;
+   name: text;
+   prizePool: float64;
+   registeredPlayers: vec text;
+   startTime: int;
+   status: text;
+   winner: text;
+ };
+type Report = 
+ record {
+   createdAt: int;
+   id: text;
+   reason: text;
+   reportedId: text;
+   reporterId: text;
+ };
+type Message = 
+ record {
+   category: text;
+   createdAt: int;
+   id: text;
+   imageUrl: text;
+   isPinned: bool;
+   reactions: vec record {
+                    text;
+                    text;
+                  };
+   senderId: text;
+   senderName: text;
+   "text": text;
+ };
+type Match = 
+ record {
+   adminProfit: float64;
+   createdAt: int;
+   currentPlayers: nat;
+   entryFee: float64;
+   id: text;
+   isHidden: bool;
+   joinedPlayers: vec record {
+                        text;
+                        text;
+                      };
+   kills: vec record {
+                text;
+                nat;
+              };
+   maxPlayers: nat;
+   mode: text;
+   perKill: float64;
+   prizePool: float64;
+   roomId: text;
+   roomPassword: text;
+   scheduledTime: text;
+   status: text;
+   title: text;
+   voiceChannelLink: text;
+   winner: text;
+ };
+type Clan = 
+ record {
+   createdAt: int;
+   id: text;
+   leaderId: text;
+   members: vec text;
+   name: text;
+ };
+service : {
+  adminAdjustCoins: (adminUid: text, targetUid: text, coins: int) -> ();
+  adminAdjustWallet: (adminUid: text, targetUid: text, amount: float64, note:
+   text) -> ();
+  adminAssignKills: (adminUid: text, matchId: text, killData:
+   vec record {
+         text;
+         nat;
+       }) -> ();
+  adminBanUser: (adminUid: text, targetUid: text, reason: text) -> ();
+  adminCreateMatch: (adminUid: text, mode: text, title: text, entryFee:
+   float64, prizePool: float64, perKill: float64, maxPlayers: nat,
+   scheduledTime: text) -> (text);
+  adminCreateTournament: (adminUid: text, name: text, entryFee: float64,
+   prizePool: float64, startTime: int) -> (text);
+  adminDeclareTournamentWinner: (adminUid: text, tournamentId: text,
+   winnerUid: text) -> ();
+  adminDeclareWinner: (adminUid: text, matchId: text, winnerUid: text) -> ();
+  adminGetAllMatches: (adminUid: text) -> (vec Match) query;
+  adminGetAllTransactions: (adminUid: text) -> (vec Transaction) query;
+  adminGetAllUsers: (adminUid: text) -> (vec UserAdmin) query;
+  adminGetReports: (adminUid: text) -> (vec Report) query;
+  adminGetRevenue: (adminUid: text) ->
+   (record {
+      netProfit: float64;
+      totalCollected: float64;
+      totalDeposits: float64;
+      totalPrizesPaid: float64;
+      totalWithdrawals: float64;
+    }) query;
+  adminPinMessage: (adminUid: text, msgId: text, pin: bool) -> ();
+  adminSendMessage: (adminUid: text, "text": text, category: text, imageUrl:
+   text, isPinned: bool) -> (text);
+  adminSetKyc: (adminUid: text, targetUid: text, verified: bool) -> ();
+  adminSetMatchRoom: (adminUid: text, matchId: text, roomId: text,
+   roomPassword: text) -> ();
+  adminSetVoiceLink: (adminUid: text, matchId: text, link: text) -> ();
+  adminToggleMatchVisibility: (adminUid: text, matchId: text) -> ();
+  adminUnbanUser: (adminUid: text, targetUid: text) -> ();
+  adminUpdateMatchStatus: (adminUid: text, matchId: text, status: text) -> ();
+  adminUpdateTransaction: (adminUid: text, txId: text, status: text) -> ();
+  createClan: (uid: text, name: text) -> (text);
+  getClans: () -> (vec Clan) query;
+  getLeaderboard: () -> (vec UserPublic) query;
+  getMatch: (matchId: text) -> (opt Match) query;
+  getMatches: () -> (vec Match) query;
+  getMessages: () -> (vec Message) query;
+  getMyProfile: (uid: text) -> (opt UserPublic) query;
+  getTournaments: () -> (vec Tournament) query;
+  getUserTransactions: (uid: text) -> (vec Transaction) query;
+  joinClan: (uid: text, clanId: text) -> (text);
+  joinMatch: (uid: text, matchId: text) -> (text);
+  login: (uid: text, password: text) -> (opt UserPublic, text);
+  reactToMessage: (uid: text, msgId: text, emoji: text) -> ();
+  registerForTournament: (uid: text, tournamentId: text) -> (text);
+  registerUser: (uid: text, password: text, name: text, phone: text,
+   referredBy: text) -> (text);
+  reportPlayer: (reporterId: text, reportedId: text, reason: text) -> ();
+  submitDeposit: (uid: text, amount: float64, upiId: text) -> (text);
+  submitWithdrawal: (uid: text, amount: float64, upiId: text) -> (text);
+  updateFcmToken: (uid: text, token: text) -> ();
+  updateProfile: (uid: text, name: text, phone: text, birthMonth: nat) -> ();
+}
