@@ -8,9 +8,9 @@ import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Runtime "mo:core/Runtime";
 import Order "mo:core/Order";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
 
   // ─── Types ────────────────────────────────────────────────────────────────

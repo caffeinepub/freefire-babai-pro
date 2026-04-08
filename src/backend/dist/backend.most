@@ -1,4 +1,4 @@
-// Version: 3.0.0
+// Version: 1.0.0
 type Clan__998698249 =
   {
     createdAt : Int;
@@ -12,10 +12,6 @@ type Data__791452850<K, V> =
 type Internal__8484328<K, V> =
   {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
 type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
-type Map__158565046<K, V> = Map__297112838<K, V>;
-type Map__297112838<K, V> =
-  {var root : Node__46230540<K, V>; var size : Nat__490723111};
-type Map__605269027<K, V> = Map__158565046<K, V>;
 type Match__564601088 =
   {
     adminProfit : Float;
@@ -54,31 +50,6 @@ type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
 type Node__46230540<K, V> =
   {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
-type OldAccessControlState__841599830 =
-  {
-    var adminAssigned : Bool;
-    userRoles : Map__605269027<Principal, UserRole__717262347>
-  };
-type OldMatchStatus__908451681 = {#completed; #inProgress; #waiting};
-type OldMatch__227272324 =
-  {
-    id : Nat;
-    player : Principal;
-    status : OldMatchStatus__908451681;
-    timestamp : Int
-  };
-type OldUserProfile__416069324 =
-  {password : Text; username : Text; wallet : Nat};
-type OldWalletTransactionStatus__299857381 = {#approved; #pending; #rejected};
-type OldWalletTransaction__334249798 =
-  {
-    amount : Nat;
-    id : Nat;
-    status : OldWalletTransactionStatus__299857381;
-    timestamp : Int;
-    transactionType : {#deposit; #withdrawal};
-    user : Principal
-  };
 type Report__89520890 =
   {
     createdAt : Int;
@@ -111,7 +82,6 @@ type Transaction__865268250 =
     uid : Text;
     upiId : Text
   };
-type UserRole__717262347 = {#admin; #guest; #user};
 type User__831686142 =
   {
     banReason : Text;
@@ -138,15 +108,7 @@ type User__831686142 =
     vipTier : Text;
     walletBalance : Float
   };
-actor ({
-  in accessControlState : OldAccessControlState__841599830;
-  in matchIdCounter : Nat;
-  in matches : Map__605269027<Nat, OldMatch__227272324>;
-  in transactionIdCounter : Nat;
-  in userProfiles : Map__605269027<Principal, OldUserProfile__416069324>;
-  in walletTransactions :
-    Map__605269027<Nat, OldWalletTransaction__334249798>
-}, {
+actor {
   stable var clanIdCounter : Nat;
   stable clans :
     {
@@ -189,4 +151,4 @@ actor ({
       var root : Node__46230540<Text, User__831686142>;
       var size : Nat__490723111
     }
-}) ;
+};
